@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { RefreshControl, ScrollView, Text, View } from "react-native";
 import { getStandingsForFixtureGroup } from "../../lib/api";
 import { useAppStore } from "../../store/app.store";
 import { useTheme } from "../../lib/useTheme";
-import { spacing, type Theme } from "../../lib/theme";
-import { Card, EmptyState, Loading, SectionTitle } from "../../components/ui";
+import { font, spacing } from "../../lib/theme";
+import { EmptyState, Loading, SectionHeader } from "../../components/ui";
 import { CategoryTabs, cleanDesc } from "../../components/CategoryTabs";
-import { StandingRow } from "../../components/StandingRow";
+import { StandingsTable, StandingsLegend } from "../../components/StandingsTable";
 import type { StandingGroup } from "../../lib/types";
 
 export default function StandingsScreen() {
@@ -14,90 +14,87 @@ export default function StandingsScreen() {
   const { categories, selectedCategory, selectCategory } = useAppStore();
   const [groups, setGroups] = useState<StandingGroup[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     if (!selectedCategory) return;
-    let alive = true;
-    setGroups(null);
     setError(null);
-    getStandingsForFixtureGroup(
-      selectedCategory.fixtureTypeID,
-      selectedCategory.fixtureGroupIdentifier
-    )
-      .then((g) => alive && setGroups(g))
-      .catch((e) => alive && setError(e instanceof Error ? e.message : "Error"));
-    return () => {
-      alive = false;
-    };
+    try {
+      const g = await getStandingsForFixtureGroup(
+        selectedCategory.fixtureTypeID,
+        selectedCategory.fixtureGroupIdentifier
+      );
+      setGroups(g);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error");
+    }
   }, [selectedCategory]);
 
-  const lines = useMemo(
-    () => groups?.flatMap((g) => g.standingsLines) ?? [],
-    [groups]
-  );
+  useEffect(() => {
+    setGroups(null);
+    load();
+  }, [load]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
+  }, [load]);
 
   return (
-    <ScrollView contentContainerStyle={{ gap: spacing.md, paddingBottom: spacing.xxl }}>
-      <View style={{ paddingTop: spacing.lg }}>
-        <CategoryTabs
-          categories={categories}
-          selected={selectedCategory}
-          onSelect={selectCategory}
-        />
-      </View>
+    <ScrollView
+      contentContainerStyle={{ paddingBottom: spacing.xxl, paddingTop: spacing.lg }}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />
+      }
+    >
+      <CategoryTabs
+        categories={categories}
+        selected={selectedCategory}
+        onSelect={selectCategory}
+      />
 
-      <View style={{ paddingHorizontal: spacing.lg }}>
-        <Card>
-          <View style={{ flexDirection: "row", paddingBottom: spacing.sm, borderBottomWidth: 1, borderBottomColor: theme.border }}>
-            <Text style={{ width: 26, textAlign: "center", color: theme.textMuted, fontSize: 11, fontWeight: "700", fontFamily: "Inter_700Bold" }}>
-              #
-            </Text>
-            <Text style={{ flex: 1, color: theme.textMuted, fontSize: 11, fontWeight: "700", fontFamily: "Inter_700Bold" }}>
-              Equipo
-            </Text>
-            <Text style={hdr(theme)}>PJ</Text>
-            <Text style={hdr(theme)}>PG</Text>
-            <Text style={hdr(theme)}>PE</Text>
-            <Text style={hdr(theme)}>PP</Text>
-            <Text style={{ ...hdr(theme), minWidth: 30 }}>Pts</Text>
-            <View style={{ marginLeft: spacing.sm, width: 60 }} />
-          </View>
-
-          {!groups ? (
-            <Loading />
-          ) : error ? (
-            <EmptyState title="No se pudieron cargar las posiciones" message={error} />
-          ) : lines.length === 0 ? (
-            <EmptyState title="Sin datos" message="No hay posiciones para esta categoría." />
-          ) : (
-            lines
-              .sort((a, b) => Number(a.position) - Number(b.position))
-              .map((line) => (
-                <StandingRow
-                  key={line.teamID}
-                  line={line}
-                  isLeader={Number(line.position) === 1}
+      <View style={{ paddingHorizontal: spacing.lg, marginTop: spacing.lg }}>
+        {!groups && !error ? (
+          <Loading />
+        ) : error ? (
+          <EmptyState title="No se pudieron cargar las posiciones" message={error} onRetry={load} />
+        ) : !groups || groups.length === 0 ? (
+          <EmptyState title="Sin datos" message="No hay posiciones para esta categoría." />
+        ) : (
+          groups.map((g, gi) => (
+            <View key={`${g.standingsDesc}-${gi}`} style={{ marginBottom: spacing.xl }}>
+              {groups.length > 1 ? (
+                <SectionHeader title={cleanDesc(g.standingsDesc)} />
+              ) : (
+                <SectionHeader
+                  title="Tabla de posiciones"
+                  subtitle={`${cleanDesc(g.standingsDesc)} · ${g.standingsLines.length} equipos`}
                 />
-              ))
-          )}
-        </Card>
-
-        {groups && groups.length > 0 ? (
-          <Text style={{ color: theme.textMuted, fontSize: 11, marginTop: spacing.sm, textAlign: "center", fontFamily: "Inter_400Regular" }}>
-            {cleanDesc(groups[0].standingsDesc)} · {lines.length} equipos
-          </Text>
-        ) : null}
+              )}
+              {g.standingsLines.length === 0 ? (
+                <EmptyState title="Sin equipos en esta tabla" />
+              ) : (
+                <>
+                  <StandingsTable lines={g.standingsLines} />
+                  <Text
+                    style={{
+                      color: theme.textFaint,
+                      fontSize: 10,
+                      fontFamily: font.regular,
+                      marginTop: spacing.sm,
+                      textAlign: "center",
+                    }}
+                  >
+                    Desliza la tabla para ver más columnas
+                  </Text>
+                  <StandingsLegend />
+                </>
+              )}
+            </View>
+          ))
+        )}
       </View>
     </ScrollView>
   );
-}
-
-function hdr(theme: Theme) {
-  return {
-    color: theme.textMuted,
-    fontSize: 11,
-    textAlign: "center" as const,
-    minWidth: 22,
-    fontFamily: "Inter_700Bold",
-  };
 }

@@ -16,6 +16,7 @@ import { useFonts } from "expo-font";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useTheme } from "../lib/useTheme";
+import { font } from "../lib/theme";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -43,8 +44,9 @@ export default function RootLayout() {
         <Stack
           screenOptions={{
             headerStyle: { backgroundColor: theme.primaryDark },
-            headerTintColor: theme.textInverse,
-            headerTitleStyle: { fontFamily: "Poppins_600SemiBold" },
+            headerTintColor: "#FFFFFF",
+            headerShadowVisible: false,
+            headerTitleStyle: { fontFamily: font.display, fontSize: 17 },
             contentStyle: { backgroundColor: theme.bg },
             animation: "slide_from_right",
           }}

@@ -1,72 +1,148 @@
 import { Linking, Pressable, ScrollView, Text, View } from "react-native";
-import { Instagram, Music2 } from "lucide-react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { ChevronRight, Instagram, Music2, Phone } from "lucide-react-native";
 import { useTheme } from "../lib/useTheme";
-import { radius, spacing } from "../lib/theme";
-import { Card, SectionTitle } from "../components/ui";
+import { elevation, font, radius, spacing } from "../lib/theme";
+import { SectionHeader } from "../components/ui";
+
+const BASE = "https://sofbollapascua.leaguerepublic.com";
 
 const SOCIALS = [
-  { label: "@liga.de.sftbol.la", url: "https://www.tiktok.com/@liga.de.sftbol.la", icon: Music2 },
-  { label: "Finca Corazón de Jesús", url: "https://www.instagram.com/fincacorazondejesus/", icon: Instagram },
-  { label: "Repuestos EAV", url: "https://www.instagram.com/motorepuestoseav/", icon: Instagram },
-  { label: "Los Portus 2014", url: "https://www.instagram.com/losportus_2014.ca/", icon: Instagram },
-  { label: "Donde Merce", url: "https://www.instagram.com/dond_merce/", icon: Instagram },
+  { label: "Liga de Softbol La Pascua", sub: "TikTok oficial", url: "https://www.tiktok.com/@liga.de.sftbol.la", icon: Music2 },
+];
+
+const SPONSORS = [
+  { label: "Finca Corazón de Jesús", url: "https://www.instagram.com/fincacorazondejesus/" },
+  { label: "Motorepuestos EAV", url: "https://www.instagram.com/motorepuestoseav/" },
+  { label: "Los Portus 2014", url: "https://www.instagram.com/losportus_2014.ca/" },
+  { label: "Donde Merce", url: "https://www.instagram.com/dond_merce/" },
 ];
 
 export default function AboutScreen() {
   const { theme } = useTheme();
   return (
-    <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxl }}>
-      <Card style={{ backgroundColor: theme.primaryDark, borderColor: theme.primaryDark }}>
-        <Text style={{ color: theme.textInverse, fontSize: 20, fontWeight: "700", fontFamily: "Poppins_600SemiBold" }}>
-          Liga de Softbol La Pascua
-        </Text>
-        <Text style={{ color: theme.textInverse, opacity: 0.85, marginTop: spacing.sm, fontFamily: "Inter_400Regular" }}>
-          Aplicación no oficial para seguir las categorías C Femenino, C Masculino y C Especial
-          de la Liga de Softbol La Pascua. Datos obtenidos de la API JSON de LeagueRepublic.
-        </Text>
-      </Card>
-
-      <View>
-        <SectionTitle>Redes y patrocinadores</SectionTitle>
-        {SOCIALS.map((s) => (
-          <Pressable
-            key={s.url}
-            onPress={() => Linking.openURL(s.url)}
-            style={({ pressed }) => ({
-              flexDirection: "row",
-              alignItems: "center",
-              gap: spacing.md,
-              padding: spacing.md,
-              borderRadius: radius.md,
-              backgroundColor: theme.surface,
-              borderColor: theme.border,
-              borderWidth: 1,
-              marginBottom: spacing.sm,
-              opacity: pressed ? 0.7 : 1,
-            })}
-          >
-            <s.icon color={theme.primary} size={20} />
-            <Text style={{ color: theme.text, fontWeight: "500", fontFamily: "Inter_500Medium" }}>{s.label}</Text>
-          </Pressable>
-        ))}
-      </View>
-
-      <Pressable
-        onPress={() => Linking.openURL("https://sofbollapascua.leaguerepublic.com/contacts.html")}
-        style={({ pressed }) => ({
-          alignItems: "center",
-          padding: spacing.md,
-          borderRadius: radius.md,
-          backgroundColor: theme.surface,
-          borderColor: theme.border,
-          borderWidth: 1,
-          opacity: pressed ? 0.7 : 1,
-        })}
+    <ScrollView contentContainerStyle={{ paddingBottom: spacing.xxl }}>
+      <LinearGradient
+        colors={theme.heroGradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{
+          padding: spacing.lg,
+          paddingBottom: spacing.xl,
+          borderBottomLeftRadius: radius.xxl,
+          borderBottomRightRadius: radius.xxl,
+        }}
       >
-        <Text style={{ color: theme.primary, fontWeight: "600", fontFamily: "Inter_600SemiBold" }}>
-          Contacto oficial
+        <Text style={{ color: "#FFFFFF", fontSize: 22, fontFamily: font.display }}>
+          Liga de Softbol{"\n"}La Pascua
         </Text>
-      </Pressable>
+        <Text
+          style={{
+            color: "#FFFFFF",
+            fontSize: 13,
+            lineHeight: 20,
+            fontFamily: font.regular,
+            opacity: 0.85,
+            marginTop: spacing.md,
+          }}
+        >
+          Aplicación para seguir las categorías C Femenino, C Masculino y C Especial.
+          Los datos provienen de la API oficial de LeagueRepublic y se actualizan
+          automáticamente.
+        </Text>
+      </LinearGradient>
+
+      <View style={{ padding: spacing.lg, gap: spacing.xl }}>
+        <View>
+          <SectionHeader title="Redes sociales" />
+          <View style={{ gap: spacing.sm }}>
+            {SOCIALS.map((s) => (
+              <LinkRow key={s.url} label={s.label} sub={s.sub} url={s.url} Icon={s.icon} />
+            ))}
+          </View>
+        </View>
+
+        <View>
+          <SectionHeader title="Patrocinadores" />
+          <View style={{ gap: spacing.sm }}>
+            {SPONSORS.map((s) => (
+              <LinkRow key={s.url} label={s.label} url={s.url} Icon={Instagram} />
+            ))}
+          </View>
+        </View>
+
+        <View>
+          <SectionHeader title="Contacto" />
+          <LinkRow label="Contactos de la liga" url={`${BASE}/contacts.html`} Icon={Phone} />
+        </View>
+
+        <Text
+          style={{
+            color: theme.textFaint,
+            fontSize: 11,
+            textAlign: "center",
+            fontFamily: font.regular,
+            lineHeight: 17,
+          }}
+        >
+          Datos suministrados por LeagueRepublic.{"\n"}
+          Liga de Softbol La Pascua · Temporada 2026
+        </Text>
+      </View>
     </ScrollView>
+  );
+}
+
+function LinkRow({
+  label,
+  sub,
+  url,
+  Icon,
+}: {
+  label: string;
+  sub?: string;
+  url: string;
+  Icon: typeof Instagram;
+}) {
+  const { theme } = useTheme();
+  return (
+    <Pressable
+      onPress={() => Linking.openURL(url)}
+      style={({ pressed }) => [
+        {
+          flexDirection: "row",
+          alignItems: "center",
+          gap: spacing.md,
+          padding: spacing.md,
+          borderRadius: radius.lg,
+          backgroundColor: theme.surface,
+          borderColor: pressed ? theme.primary : theme.borderSubtle,
+          borderWidth: 1,
+        },
+        elevation(1),
+      ]}
+    >
+      <View
+        style={{
+          width: 34,
+          height: 34,
+          borderRadius: radius.md,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: theme.primarySoft,
+        }}
+      >
+        <Icon color={theme.primary} size={17} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={{ color: theme.text, fontSize: 13, fontFamily: font.medium }}>{label}</Text>
+        {sub ? (
+          <Text style={{ color: theme.textFaint, fontSize: 11, fontFamily: font.regular }}>
+            {sub}
+          </Text>
+        ) : null}
+      </View>
+      <ChevronRight color={theme.textFaint} size={17} />
+    </Pressable>
   );
 }

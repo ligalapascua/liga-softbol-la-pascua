@@ -1,19 +1,38 @@
 import { Text, View } from "react-native";
 import { Link } from "expo-router";
 import { useTheme } from "../lib/useTheme";
-import { spacing } from "../lib/theme";
+import { font, radius, spacing } from "../lib/theme";
 
 export default function NotFoundScreen() {
   const { theme } = useTheme();
   return (
-    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.xxl, gap: spacing.md }}>
-      <Text style={{ fontSize: 64, fontWeight: "700", color: theme.primary, fontFamily: "Poppins_600SemiBold" }}>
-        404
-      </Text>
-      <Text style={{ color: theme.text, fontSize: 18, fontFamily: "Inter_500Medium" }}>
+    <View
+      style={{
+        flex: 1,
+        alignItems: "center",
+        justifyContent: "center",
+        padding: spacing.xxl,
+        gap: spacing.md,
+      }}
+    >
+      <Text style={{ fontSize: 58, color: theme.primary, fontFamily: font.display }}>404</Text>
+      <Text style={{ color: theme.text, fontSize: 16, fontFamily: font.medium }}>
         Esta página no existe.
       </Text>
-      <Link href="/" style={{ color: theme.primary, fontWeight: "600", fontFamily: "Inter_600SemiBold" }}>
+      <Link
+        href="/"
+        style={{
+          color: "#FFFFFF",
+          fontFamily: font.semibold,
+          fontSize: 13,
+          backgroundColor: theme.primary,
+          paddingHorizontal: spacing.lg,
+          paddingVertical: spacing.sm,
+          borderRadius: radius.pill,
+          overflow: "hidden",
+          marginTop: spacing.sm,
+        }}
+      >
         Volver al inicio
       </Link>
     </View>

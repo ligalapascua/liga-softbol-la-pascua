@@ -1,17 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 import { useLocalSearchParams } from "expo-router";
-import {
-  getFixturesForSeason,
-  getStatisticSummaryForTeam,
-  parseFixtureDate,
-} from "../../lib/api";
+import { LinearGradient } from "expo-linear-gradient";
+import { getFixturesForSeason, getStatisticSummaryForTeam } from "../../lib/api";
 import { useAppStore } from "../../store/app.store";
 import { useTheme } from "../../lib/useTheme";
-import { spacing } from "../../lib/theme";
-import { Card, EmptyState, Loading, SectionTitle } from "../../components/ui";
+import { elevation, font, radius, spacing, type Theme } from "../../lib/theme";
+import { EmptyState, Loading, SectionHeader } from "../../components/ui";
 import { FixtureCard } from "../../components/FixtureCard";
 import { TeamLogo } from "../../components/TeamLogo";
+import { RecentForm } from "../../components/RecentForm";
 import type { Fixture, PersonStatSummary } from "../../lib/types";
 
 export default function TeamScreen() {
@@ -23,116 +21,208 @@ export default function TeamScreen() {
   const [fixtures, setFixtures] = useState<Fixture[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     if (!teamID) return;
-    let alive = true;
-    setStats(null);
-    setFixtures(null);
     setError(null);
-    Promise.all([
-      getStatisticSummaryForTeam(seasonID, teamID)
-        .then((s) => s.listCumulativePersonStatSummary ?? [])
-        .catch(() => [] as PersonStatSummary[]),
-      getFixturesForSeason().catch((e) => {
-        throw e;
-      }),
-    ])
-      .then(([s, f]) => {
-        if (!alive) return;
-        setStats(s);
-        setFixtures(f);
-      })
-      .catch((e) => alive && setError(e instanceof Error ? e.message : "Error"));
-    return () => {
-      alive = false;
-    };
+    try {
+      const [s, f] = await Promise.all([
+        getStatisticSummaryForTeam(seasonID, teamID)
+          .then((r) => r.listCumulativePersonStatSummary ?? [])
+          .catch(() => [] as PersonStatSummary[]),
+        getFixturesForSeason(),
+      ]);
+      setStats(s);
+      setFixtures(f);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error");
+    }
   }, [teamID, seasonID]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const teamFixtures = useMemo(() => {
     if (!fixtures) return [];
     return fixtures
       .filter((f) => f.homeTeam === teamID || f.roadTeam === teamID)
-      .sort((a, b) => b.fixtureDateInMilliseconds - a.fixtureDateInMilliseconds)
-      .slice(0, 10);
+      .sort((a, b) => b.fixtureDateInMilliseconds - a.fixtureDateInMilliseconds);
   }, [fixtures, teamID]);
 
-  // Agrupar stats por jugador
+  const teamName = useMemo(() => {
+    const f = teamFixtures[0];
+    if (!f) return "Equipo";
+    return f.homeTeam === teamID ? f.homeTeamName : f.roadTeamName;
+  }, [teamFixtures, teamID]);
+
+  // Balance y forma reciente calculados de los partidos jugados.
+  const record = useMemo(() => {
+    let w = 0,
+      l = 0,
+      t = 0;
+    const form: string[] = [];
+    const playedAsc = [...teamFixtures].filter((f) => f.result).reverse();
+    for (const f of playedAsc) {
+      const isHome = f.homeTeam === teamID;
+      const mine = Number(isHome ? f.homeScore : f.roadScore);
+      const theirs = Number(isHome ? f.roadScore : f.homeScore);
+      if (mine > theirs) (w++, form.push("W"));
+      else if (mine < theirs) (l++, form.push("L"));
+      else (t++, form.push("D"));
+    }
+    return { w, l, t, form: form.join("") };
+  }, [teamFixtures, teamID]);
+
   const players = useMemo(() => {
     if (!stats) return [];
     const map = new Map<number, { name: string; stats: PersonStatSummary[] }>();
     for (const s of stats) {
-      const entry = map.get(s.personID) ?? {
-        name: `${s.firstName} ${s.lastName}`.trim(),
-        stats: [],
-      };
+      const entry =
+        map.get(s.personID) ?? { name: `${s.firstName} ${s.lastName}`.trim(), stats: [] };
       entry.stats.push(s);
       map.set(s.personID, entry);
     }
-    return [...map.values()];
+    return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
   }, [stats]);
 
-  const teamName = fixtures?.find((f) => f.homeTeam === teamID)?.homeTeamName
-    ?? fixtures?.find((f) => f.roadTeam === teamID)?.roadTeamName
-    ?? "Equipo";
-
   return (
-    <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxl }}>
-      <Card style={{ alignItems: "center", gap: spacing.sm }}>
-        <TeamLogo name={teamName} size={64} />
-        <Text style={{ color: theme.text, fontSize: 20, fontWeight: "700", textAlign: "center", fontFamily: "Poppins_600SemiBold" }}>
+    <ScrollView contentContainerStyle={{ paddingBottom: spacing.xxl }}>
+      <LinearGradient
+        colors={theme.heroGradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{
+          alignItems: "center",
+          paddingTop: spacing.lg,
+          paddingBottom: spacing.xl,
+          paddingHorizontal: spacing.lg,
+          borderBottomLeftRadius: radius.xxl,
+          borderBottomRightRadius: radius.xxl,
+          gap: spacing.sm,
+        }}
+      >
+        <TeamLogo name={teamName} size={68} spaced={false} />
+        <Text
+          style={{
+            color: "#FFFFFF",
+            fontSize: 20,
+            textAlign: "center",
+            fontFamily: font.display,
+          }}
+        >
           {teamName}
         </Text>
-      </Card>
+        {record.w + record.l + record.t > 0 ? (
+          <>
+            <Text
+              style={{
+                color: "#FFFFFF",
+                fontSize: 13,
+                fontFamily: font.medium,
+                opacity: 0.85,
+              }}
+            >
+              {record.w}G · {record.l}P{record.t > 0 ? ` · ${record.t}E` : ""}
+            </Text>
+            <RecentForm form={record.form} max={6} size={20} />
+          </>
+        ) : null}
+      </LinearGradient>
 
-      <View>
-        <SectionTitle>Últimos partidos</SectionTitle>
-        {!fixtures ? (
-          <Loading />
-        ) : error ? (
-          <EmptyState title="Error" message={error} />
-        ) : teamFixtures.length === 0 ? (
-          <EmptyState title="Sin partidos" />
-        ) : (
-          teamFixtures.map((f) => <FixtureCard key={f.fixtureID} fixture={f} />)
-        )}
-      </View>
+      <View style={{ padding: spacing.lg, gap: spacing.xl }}>
+        <View>
+          <SectionHeader title="Partidos" subtitle={`${teamFixtures.length} en la temporada`} />
+          {!fixtures && !error ? (
+            <Loading />
+          ) : error ? (
+            <EmptyState title="Error al cargar" message={error} onRetry={load} />
+          ) : teamFixtures.length === 0 ? (
+            <EmptyState title="Sin partidos registrados" />
+          ) : (
+            teamFixtures.slice(0, 12).map((f) => <FixtureCard key={f.fixtureID} fixture={f} />)
+          )}
+        </View>
 
-      <View>
-        <SectionTitle>Plantilla y estadísticas</SectionTitle>
-        {!stats ? (
-          <Loading />
-        ) : players.length === 0 ? (
-          <EmptyState title="Sin estadísticas disponibles" message="Este equipo aún no tiene estadísticas registradas." />
-        ) : (
-          players.map((p) => (
-            <Card key={p.name} style={{ marginBottom: spacing.sm }}>
-              <Text style={{ color: theme.text, fontWeight: "700", marginBottom: spacing.sm, fontFamily: "Inter_700Bold" }}>
-                {p.name}
-              </Text>
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.sm }}>
-                {p.stats.map((s) => (
-                  <View
-                    key={`${s.leagueStatTypeID}`}
-                    style={{
-                      backgroundColor: theme.surfaceAlt,
-                      borderRadius: 8,
-                      paddingHorizontal: spacing.sm,
-                      paddingVertical: spacing.xs,
-                    }}
-                  >
-                    <Text style={{ color: theme.textMuted, fontSize: 10, fontFamily: "Inter_400Regular" }}>
-                      {s.leagueStatTypeName}
-                    </Text>
-                    <Text style={{ color: theme.text, fontWeight: "700", fontFamily: "Inter_700Bold" }}>
-                      {s.statTypeValue}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            </Card>
-          ))
-        )}
+        <View>
+          <SectionHeader title="Plantilla" subtitle={players.length ? `${players.length} jugadores` : undefined} />
+          {!stats ? (
+            <Loading />
+          ) : players.length === 0 ? (
+            <EmptyState
+              title="Sin estadísticas disponibles"
+              message="Este equipo aún no tiene estadísticas registradas."
+            />
+          ) : (
+            <View style={{ gap: spacing.sm }}>
+              {players.map((p) => (
+                <PlayerCard key={p.name} name={p.name} stats={p.stats} theme={theme} />
+              ))}
+            </View>
+          )}
+        </View>
       </View>
     </ScrollView>
+  );
+}
+
+function PlayerCard({
+  name,
+  stats,
+  theme,
+}: {
+  name: string;
+  stats: PersonStatSummary[];
+  theme: Theme;
+}) {
+  const shown = stats.filter((s) => (parseFloat(s.statTypeValue) || 0) !== 0).slice(0, 8);
+  return (
+    <View
+      style={[
+        {
+          backgroundColor: theme.surface,
+          borderRadius: radius.lg,
+          borderWidth: 1,
+          borderColor: theme.borderSubtle,
+          padding: spacing.md,
+        },
+        elevation(1),
+      ]}
+    >
+      <Text style={{ color: theme.text, fontSize: 14, fontFamily: font.semibold }}>{name}</Text>
+      {shown.length === 0 ? (
+        <Text
+          style={{
+            color: theme.textFaint,
+            fontSize: 11,
+            fontFamily: font.regular,
+            marginTop: spacing.xs,
+          }}
+        >
+          Sin estadísticas acumuladas
+        </Text>
+      ) : (
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginTop: spacing.sm }}>
+          {shown.map((s) => (
+            <View
+              key={s.leagueStatTypeID}
+              style={{
+                backgroundColor: theme.surfaceAlt,
+                borderRadius: radius.sm,
+                paddingHorizontal: spacing.sm,
+                paddingVertical: spacing.xs,
+                minWidth: 52,
+              }}
+            >
+              <Text style={{ color: theme.textFaint, fontSize: 9, fontFamily: font.bold, letterSpacing: 0.4 }}>
+                {s.leagueStatTypeName}
+              </Text>
+              <Text style={{ color: theme.text, fontSize: 14, fontFamily: font.bold }}>
+                {s.statTypeValue}
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
+    </View>
   );
 }

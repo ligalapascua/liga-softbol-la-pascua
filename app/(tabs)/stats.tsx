@@ -1,159 +1,260 @@
-import { useEffect, useMemo, useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
-import {
-  getStatisticSummaryForTeam,
-  getTeamsForFixtureGroup,
-} from "../../lib/api";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import { getStatisticSummaryForTeam, getTeamsForFixtureGroup } from "../../lib/api";
 import { useAppStore } from "../../store/app.store";
 import { useTheme } from "../../lib/useTheme";
-import { radius, spacing } from "../../lib/theme";
-import { CategoryTabs, cleanDesc } from "../../components/CategoryTabs";
-import { Card, EmptyState, Loading, SectionTitle } from "../../components/ui";
+import { elevation, font, radius, spacing, type Theme } from "../../lib/theme";
+import { CategoryTabs } from "../../components/CategoryTabs";
+import { EmptyState, Loading, SectionHeader } from "../../components/ui";
 import { TeamLogo } from "../../components/TeamLogo";
 import type { PersonStatSummary, Team } from "../../lib/types";
+
+interface Leader extends PersonStatSummary {
+  numeric: number;
+  teamName: string;
+}
 
 export default function StatsScreen() {
   const { theme } = useTheme();
   const { seasonID, categories, selectedCategory, selectCategory } = useAppStore();
-  const [teams, setTeams] = useState<Team[] | null>(null);
-  const [allStats, setAllStats] = useState<PersonStatSummary[] | null>(null);
+  const [all, setAll] = useState<Leader[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [metric, setMetric] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     if (!selectedCategory) return;
-    let alive = true;
-    setTeams(null);
-    setAllStats(null);
     setError(null);
-    setMetric(null);
-
-    (async () => {
-      try {
-        const t = await getTeamsForFixtureGroup(
-          selectedCategory.fixtureTypeID,
-          selectedCategory.fixtureGroupIdentifier
-        );
-        if (!alive) return;
-        setTeams(t);
-        const summaries = await Promise.all(
-          t.map((team) =>
-            getStatisticSummaryForTeam(seasonID, team.teamID).then(
-              (s) => s.listCumulativePersonStatSummary ?? []
-            )
-          )
-        );
-        if (!alive) return;
-        const flat = summaries.flat();
-        setAllStats(flat);
-      } catch (e) {
-        if (alive) setError(e instanceof Error ? e.message : "Error");
-      }
-    })();
-
-    return () => {
-      alive = false;
-    };
+    try {
+      const teams: Team[] = await getTeamsForFixtureGroup(
+        selectedCategory.fixtureTypeID,
+        selectedCategory.fixtureGroupIdentifier
+      );
+      const perTeam = await Promise.all(
+        teams.map(async (t) => {
+          try {
+            const s = await getStatisticSummaryForTeam(seasonID, t.teamID);
+            return (s.listCumulativePersonStatSummary ?? []).map((p) => ({
+              ...p,
+              numeric: parseFloat(p.statTypeValue) || 0,
+              teamName: t.teamName,
+            }));
+          } catch {
+            return [] as Leader[];
+          }
+        })
+      );
+      setAll(perTeam.flat());
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error");
+    }
   }, [selectedCategory, seasonID]);
 
+  useEffect(() => {
+    setAll(null);
+    setMetric(null);
+    load();
+  }, [load]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
+  }, [load]);
+
+  // Métricas con al menos un valor > 0, ordenadas por relevancia.
   const metrics = useMemo(() => {
-    if (!allStats) return [];
-    const set = new Map<string, number>();
-    for (const s of allStats) set.set(s.leagueStatTypeName, (set.get(s.leagueStatTypeName) ?? 0) + 1);
-    return [...set.keys()].sort((a, b) => (set.get(b)! - set.get(a)!));
-  }, [allStats]);
+    if (!all) return [];
+    const counts = new Map<string, number>();
+    for (const s of all) {
+      if (s.numeric > 0) counts.set(s.leagueStatTypeName, (counts.get(s.leagueStatTypeName) ?? 0) + 1);
+    }
+    return [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([k]) => k);
+  }, [all]);
 
   useEffect(() => {
-    if (metrics.length && !metric) setMetric(metrics[0]);
+    if (metrics.length && (!metric || !metrics.includes(metric))) setMetric(metrics[0]);
   }, [metrics, metric]);
 
   const leaders = useMemo(() => {
-    if (!allStats || !metric) return [];
-    return allStats
-      .filter((s) => s.leagueStatTypeName === metric)
-      .map((s) => ({
-        ...s,
-        numeric: parseFloat(s.statTypeValue) || 0,
-      }))
+    if (!all || !metric) return [];
+    return all
+      .filter((s) => s.leagueStatTypeName === metric && s.numeric > 0)
       .sort((a, b) => b.numeric - a.numeric)
-      .slice(0, 15);
-  }, [allStats, metric]);
+      .slice(0, 20);
+  }, [all, metric]);
 
   return (
-    <ScrollView contentContainerStyle={{ gap: spacing.md, paddingBottom: spacing.xxl }}>
-      <View style={{ paddingTop: spacing.lg }}>
-        <CategoryTabs
-          categories={categories}
-          selected={selectedCategory}
-          onSelect={selectCategory}
-        />
-      </View>
+    <ScrollView
+      contentContainerStyle={{ paddingBottom: spacing.xxl, paddingTop: spacing.lg }}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />
+      }
+    >
+      <CategoryTabs
+        categories={categories}
+        selected={selectedCategory}
+        onSelect={selectCategory}
+      />
 
-      <View style={{ paddingHorizontal: spacing.lg }}>
-        <SectionTitle>Líderes estadísticos</SectionTitle>
-
-        {!allStats ? (
-          <Loading label="Recopilando estadísticas de todos los equipos..." />
+      <View style={{ paddingHorizontal: spacing.lg, marginTop: spacing.lg }}>
+        {!all && !error ? (
+          <Loading label="Recopilando estadísticas de todos los equipos…" />
         ) : error ? (
-          <EmptyState title="No se pudieron cargar las estadísticas" message={error} />
+          <EmptyState title="No se pudieron cargar las estadísticas" message={error} onRetry={load} />
         ) : metrics.length === 0 ? (
-          <EmptyState title="Sin estadísticas" message="Esta categoría no tiene estadísticas disponibles." />
+          <EmptyState
+            title="Sin estadísticas"
+            message="Esta categoría aún no tiene estadísticas registradas."
+          />
         ) : (
           <>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingBottom: spacing.md }}>
-              {metrics.map((m) => (
-                <Pressable
-                  key={m}
-                  onPress={() => setMetric(m)}
-                  style={{
-                    backgroundColor: metric === m ? theme.primary : theme.surface,
-                    borderWidth: 1,
-                    borderColor: metric === m ? theme.primary : theme.border,
-                    borderRadius: radius.pill,
-                    paddingHorizontal: spacing.md,
-                    paddingVertical: spacing.sm,
-                  }}
-                >
-                  <Text style={{ color: metric === m ? theme.textInverse : theme.text, fontWeight: "600", fontFamily: "Inter_600SemiBold" }}>
-                    {m}
-                  </Text>
-                </Pressable>
-              ))}
+            <SectionHeader title="Líderes" subtitle="Selecciona una estadística" />
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ gap: spacing.sm, paddingBottom: spacing.md }}
+            >
+              {metrics.map((m) => {
+                const active = metric === m;
+                return (
+                  <Pressable
+                    key={m}
+                    onPress={() => setMetric(m)}
+                    style={[
+                      {
+                        backgroundColor: active ? theme.primary : theme.surface,
+                        borderWidth: 1,
+                        borderColor: active ? theme.primary : theme.border,
+                        borderRadius: radius.pill,
+                        paddingHorizontal: spacing.lg,
+                        paddingVertical: spacing.sm,
+                      },
+                      active ? elevation(2) : null,
+                    ]}
+                  >
+                    <Text
+                      style={{
+                        color: active ? theme.textInverse : theme.textMuted,
+                        fontSize: 13,
+                        fontFamily: active ? font.semibold : font.medium,
+                      }}
+                    >
+                      {m}
+                    </Text>
+                  </Pressable>
+                );
+              })}
             </ScrollView>
 
-            <Card>
-              {leaders.length === 0 ? (
-                <EmptyState title="Sin datos para esta métrica" />
-              ) : (
-                leaders.map((p, i) => (
-                  <View
+            {leaders.length === 0 ? (
+              <EmptyState title="Sin datos para esta estadística" />
+            ) : (
+              <View
+                style={[
+                  {
+                    backgroundColor: theme.surface,
+                    borderRadius: radius.xl,
+                    borderWidth: 1,
+                    borderColor: theme.borderSubtle,
+                    overflow: "hidden",
+                  },
+                  elevation(2),
+                ]}
+              >
+                {leaders.map((p, i) => (
+                  <LeaderRow
                     key={`${p.personID}-${p.leagueStatTypeID}`}
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      paddingVertical: spacing.sm,
-                      borderBottomWidth: i === leaders.length - 1 ? 0 : 1,
-                      borderBottomColor: theme.border,
-                    }}
-                  >
-                    <Text style={{ width: 24, textAlign: "center", color: i < 3 ? theme.primary : theme.textMuted, fontWeight: "700", fontFamily: "Inter_700Bold" }}>
-                      {i + 1}
-                    </Text>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ color: theme.text, fontWeight: "500", fontFamily: "Inter_500Medium" }} numberOfLines={1}>
-                        {p.firstName} {p.lastName}
-                      </Text>
-                    </View>
-                    <Text style={{ color: theme.primary, fontWeight: "700", fontSize: 16, fontFamily: "Inter_700Bold" }}>
-                      {p.statTypeValue}
-                    </Text>
-                  </View>
-                ))
-              )}
-            </Card>
+                    rank={i + 1}
+                    leader={p}
+                    theme={theme}
+                    last={i === leaders.length - 1}
+                  />
+                ))}
+              </View>
+            )}
           </>
         )}
       </View>
     </ScrollView>
+  );
+}
+
+function LeaderRow({
+  rank,
+  leader,
+  theme,
+  last,
+}: {
+  rank: number;
+  leader: Leader;
+  theme: Theme;
+  last: boolean;
+}) {
+  const medal =
+    rank === 1 ? theme.gold : rank === 2 ? "#94A3B8" : rank === 3 ? "#B45309" : null;
+
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        paddingVertical: spacing.md,
+        paddingHorizontal: spacing.md,
+        borderBottomWidth: last ? 0 : 1,
+        borderBottomColor: theme.borderSubtle,
+        backgroundColor: rank <= 3 ? theme.surfaceAlt : theme.surface,
+      }}
+    >
+      <View
+        style={{
+          width: 26,
+          height: 26,
+          borderRadius: radius.sm,
+          alignItems: "center",
+          justifyContent: "center",
+          marginRight: spacing.sm,
+          backgroundColor: medal ? `${medal}22` : "transparent",
+        }}
+      >
+        <Text
+          style={{
+            fontSize: 12,
+            color: medal ?? theme.textFaint,
+            fontFamily: font.bold,
+          }}
+        >
+          {rank}
+        </Text>
+      </View>
+
+      <TeamLogo name={leader.teamName} size={30} />
+
+      <View style={{ flex: 1 }}>
+        <Text
+          style={{ color: theme.text, fontSize: 14, fontFamily: font.medium }}
+          numberOfLines={1}
+        >
+          {leader.firstName} {leader.lastName}
+        </Text>
+        <Text
+          style={{ color: theme.textFaint, fontSize: 11, fontFamily: font.regular }}
+          numberOfLines={1}
+        >
+          {leader.teamName}
+        </Text>
+      </View>
+
+      <Text
+        style={{
+          color: theme.primary,
+          fontSize: 18,
+          fontFamily: font.bold,
+          marginLeft: spacing.sm,
+        }}
+      >
+        {leader.statTypeValue}
+      </Text>
+    </View>
   );
 }

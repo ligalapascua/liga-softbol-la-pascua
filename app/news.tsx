@@ -1,10 +1,10 @@
 import { Linking, Pressable, ScrollView, Text, View } from "react-native";
 import { ExternalLink } from "lucide-react-native";
 import { useTheme } from "../lib/useTheme";
-import { radius, spacing } from "../lib/theme";
-import { Card, SectionTitle } from "../components/ui";
+import { elevation, font, radius, spacing } from "../lib/theme";
+import { SectionHeader } from "../components/ui";
 
-const NEWS_SOURCES = [
+const NEWS = [
   {
     slug: "la_liga_de_softbol_la_pascua_se_prepara_para_su_gran_allstar_2026",
     title: "La Liga de Softbol La Pascua se prepara para su gran All-Star 2026",
@@ -23,53 +23,72 @@ const NEWS_SOURCES = [
   },
 ];
 
-function url(slug: string) {
-  return `https://sofbollapascua.leaguerepublic.com/newsArticle/${slug}.html`;
-}
+const BASE = "https://sofbollapascua.leaguerepublic.com";
 
 export default function NewsScreen() {
   const { theme } = useTheme();
   return (
-    <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxl }}>
-      <SectionTitle>Últimas noticias</SectionTitle>
-      <Text style={{ color: theme.textMuted, marginBottom: spacing.md, fontFamily: "Inter_400Regular" }}>
-        Las noticias se publican en el sitio oficial. Toca para leer el artículo completo.
-      </Text>
-      {NEWS_SOURCES.map((n) => (
-        <Pressable
-          key={n.slug}
-          onPress={() => Linking.openURL(url(n.slug))}
-          style={({ pressed }) => ({
-            backgroundColor: theme.surface,
-            borderRadius: radius.lg,
-            padding: spacing.lg,
-            borderWidth: 1,
-            borderColor: theme.border,
-            opacity: pressed ? 0.7 : 1,
-          })}
-        >
-          <Text style={{ color: theme.text, fontSize: 15, fontWeight: "600", fontFamily: "Inter_600SemiBold" }}>
-            {n.title}
-          </Text>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.xs, marginTop: spacing.sm }}>
-            <ExternalLink color={theme.primary} size={14} />
-            <Text style={{ color: theme.primary, fontSize: 12, fontFamily: "Inter_500Medium" }}>Leer más</Text>
-          </View>
-        </Pressable>
-      ))}
+    <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxl }}>
+      <SectionHeader
+        title="Últimas noticias"
+        subtitle="Publicadas en el sitio oficial de la liga"
+      />
+
+      <View style={{ gap: spacing.sm }}>
+        {NEWS.map((n) => (
+          <Pressable
+            key={n.slug}
+            onPress={() => Linking.openURL(`${BASE}/newsArticle/${n.slug}.html`)}
+            style={({ pressed }) => [
+              {
+                backgroundColor: theme.surface,
+                borderRadius: radius.lg,
+                padding: spacing.lg,
+                borderWidth: 1,
+                borderColor: pressed ? theme.primary : theme.borderSubtle,
+              },
+              elevation(1),
+            ]}
+          >
+            <Text
+              style={{
+                color: theme.text,
+                fontSize: 14,
+                lineHeight: 20,
+                fontFamily: font.semibold,
+              }}
+            >
+              {n.title}
+            </Text>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: spacing.xs,
+                marginTop: spacing.sm,
+              }}
+            >
+              <ExternalLink color={theme.primary} size={12} />
+              <Text style={{ color: theme.primary, fontSize: 11, fontFamily: font.semibold }}>
+                Leer artículo
+              </Text>
+            </View>
+          </Pressable>
+        ))}
+      </View>
 
       <Pressable
-        onPress={() => Linking.openURL("https://sofbollapascua.leaguerepublic.com/newsForAll.html")}
+        onPress={() => Linking.openURL(`${BASE}/newsForAll.html`)}
         style={({ pressed }) => ({
           alignItems: "center",
           padding: spacing.md,
-          borderRadius: radius.md,
+          borderRadius: radius.lg,
           backgroundColor: theme.primaryDark,
-          opacity: pressed ? 0.8 : 1,
-          marginTop: spacing.sm,
+          opacity: pressed ? 0.85 : 1,
+          marginTop: spacing.lg,
         })}
       >
-        <Text style={{ color: theme.textInverse, fontWeight: "600", fontFamily: "Inter_600SemiBold" }}>
+        <Text style={{ color: "#FFFFFF", fontSize: 13, fontFamily: font.semibold }}>
           Ver todas las noticias
         </Text>
       </Pressable>
