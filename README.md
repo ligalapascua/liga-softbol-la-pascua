@@ -164,6 +164,20 @@ El repo está conectado a Netlify y despliega automáticamente en cada push a
 - **Proxy API**: `/api/*` → `api.leaguerepublic.com/json/*` (evita CORS)
 - **SPA redirects**: todas las rutas sirven `index.html` (expo-router)
 
+### Visitor access (privacidad del sitio)
+
+Por defecto Netlify marca los sitios como **privados** (Team Protection): los
+visitantes externos ven un mensaje "This site is private" y deben iniciar
+sesión con una cuenta invitada del equipo. Para que el sitio sea público:
+
+1. Abre
+   <https://app.netlify.com/projects/ligalapascua/configuration/general#visitor-access>
+2. En **Visitor access** → **Site access**, selecciona **Public**
+3. Guarda los cambios
+
+Si el sitio vuelve a mostrar "This site is private", revisa este setting —
+es independiente de la configuración de `netlify.toml`.
+
 URL: <https://ligalapascua.netlify.app>
 
 ## Documentación de referencia

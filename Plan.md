@@ -316,7 +316,8 @@ liga-softbol-la-pascua/
   LeagueRepublic).
 - **Iconos y splash**: usar los del sitio original o generar unos nuevos con
   la identidad de la liga.
-- **Netlify Identity / protección de acceso**: el sitio devuelve 401 en
-  peticiones sin credenciales (manifest, etc.). Revisar la configuración de
-  acceso en el panel de Netlify (Web security / Access control) y desactivar
-  la protección para que el sitio sea público.
+- ~~**Netlify Identity / protección de acceso**~~: resuelto. El setting
+  **Visitor access** estaba en "Private" (Team Protection). Se cambió a
+  **Public** desde
+  `app.netlify.com/projects/ligalapascua/configuration/general#visitor-access`.
+  Documentado en README.md.
