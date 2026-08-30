@@ -2,6 +2,15 @@
   command = "npm run build:web"
   publish = "dist"
 
+# Proxy para la API de LeagueRepublic (evita CORS en web).
+# /api/getSeasonsForLeague/815179436.json -> https://api.leaguerepublic.com/json/getSeasonsForLeague/815179436.json
+[[redirects]]
+  from = "/api/*"
+  to = "https://api.leaguerepublic.com/json/:splat"
+  status = 200
+  force = true
+
+# SPA: todas las rutas sirven index.html (expo-router client routing)
 [[redirects]]
   from = "/*"
   to = "/index.html"

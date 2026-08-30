@@ -1,5 +1,6 @@
 // Cliente de la API JSON de LeagueRepublic para la Liga de Softbol La Pascua.
 // Documentación: docs/LeagueRepublic-API-Reference-v1.3.pdf
+import { Platform } from "react-native";
 import { readCache, readFresh, writeCache } from "./cache";
 import {
   ApiError,
@@ -16,7 +17,12 @@ import {
 export const LEAGUE_ID = 815179436;
 export const DEFAULT_SEASON_ID = 904656134;
 
-const BASE = "https://api.leaguerepublic.com/json";
+// En web usamos un proxy (Netlify redirect) para evitar CORS.
+// En nativo no hay CORS, así que usamos la URL directa.
+const BASE =
+  Platform.OS === "web"
+    ? "/api" // proxy: /api/* -> https://api.leaguerepublic.com/json/*
+    : "https://api.leaguerepublic.com/json";
 
 // TTLs por tipo de recurso.
 const TTL = {
