@@ -20,8 +20,7 @@
       "android": { "buildType": "app-bundle" }
     },
     "adhoc": {
-      "distribution": "internal",
-      "ios": { "buildType": "release" }
+      "distribution": "internal"
     }
   },
   "submit": {

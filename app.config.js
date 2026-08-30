@@ -1,13 +1,12 @@
 // Configuración dinámica de Expo.
 // Inyecta el manifest PWA y meta tags en el HTML exportado.
-import type { ExpoConfig, ConfigContext } from "@expo/config-types";
 
-export default ({ config }: ConfigContext): ExpoConfig => {
+/** @param {{ config: any }} ctx */
+export default ({ config }) => {
   return {
     ...config,
     web: {
       ...config.web,
-      // Expo usa estos valores para generar meta tags PWA en index.html
       name: "Liga Softbol La Pascua",
       shortName: "Softbol La Pascua",
       lang: "es",

@@ -11,7 +11,9 @@
       "resizeMode": "contain",
       "backgroundColor": "#0B4281"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "icon": "./assets/images/icon.png",
@@ -35,7 +37,9 @@
       "backgroundColor": "#0B4281",
       "themeColor": "#0B4281"
     },
-    "plugins": ["expo-router"],
+    "plugins": [
+      "expo-router"
+    ],
     "experiments": {
       "typedRoutes": true
     },
@@ -44,7 +48,7 @@
         "origin": false
       },
       "eas": {
-        "projectId": ""
+        "projectId": "dfc30d6b-2302-44e6-944c-9d0bac2b406c"
       }
     },
     "owner": "ligalapascua"
