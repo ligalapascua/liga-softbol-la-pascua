@@ -1,0 +1,26 @@
+# Directorios de desarrollo
+node_modules/
+.expo/
+.vscode/
+__tests__/
+coverage/
+.git/
+
+# Archivos de desarrollo
+*.log
+.env
+.env.*
+
+# Assets sin optimizar
+assets/raw/
+*.psd
+*.ai
+
+# Archivos temporales
+*.tmp
+.cache/
+
+# Docs temporales
+docs/_*.json
+docs/_*.html
+docs/_*.txt

@@ -35,7 +35,7 @@ if not exist ".easignore" (
 :menu
 echo.
 echo ================================================
-echo    MENU DE CONSTRUCCION Y DESPLIEGUE MOVIL      
+echo    LIGA DE SOFTBOL LA PASCUA - BUILD MOVIL
 echo ================================================
 echo.
 echo ANDROID:
@@ -81,7 +81,7 @@ goto menu
 cls
 echo.
 echo ========================================
-echo    GENERANDO APK PARA PRUEBAS...
+echo    GENERANDO APK PARA PRUEBAS (Softbol La Pascua)...
 echo ========================================
 echo.
 echo Generando APK para Android con perfil preview...
@@ -95,7 +95,7 @@ goto menu
 cls
 echo.
 echo ========================================
-echo    GENERANDO AAB PARA PLAY STORE...
+echo    GENERANDO AAB PARA PLAY STORE (Softbol La Pascua)...
 echo ========================================
 echo.
 echo Generando AAB para Android con perfil production...
@@ -175,8 +175,10 @@ goto menu
 cls
 echo.
 echo ========================================
-echo    INICIANDO VERSION WEB...
+echo    INICIANDO VERSION WEB (Softbol La Pascua)...
 echo ========================================
+echo.
+echo Tambien puedes exportar la PWA con: npm run build:web
 echo.
 call npx expo start --web
 pause
@@ -234,23 +236,41 @@ goto menu
 cls
 echo.
 echo ========================================
-echo    EJECUTANDO DIAGNOSTICO...
+echo    DIAGNOSTICO DE BUILD...
 echo ========================================
 echo.
-call diagnose-build.bat
+echo Verificando instalacion de EAS CLI...
+call npx eas-cli --version
+echo.
+echo Verificando login de Expo...
+call npx eas-cli whoami
+echo.
+echo Estado del proyecto:
+call npx eas-cli project:info
+echo.
+pause
 goto menu
 
 :setup_credentials
 cls
 echo.
 echo ========================================
-echo    CONFIGURACION DE CREDENCIALES...
+echo    CONFIGURACION DE CREDENCIALES EAS...
 echo ========================================
 echo.
-call setup-credentials.bat
+echo Para configurar credenciales de Android (keystore):
+echo   npx eas-cli credentials --platform android
+echo.
+echo Para configurar credenciales de iOS (certificados):
+echo   npx eas-cli credentials --platform ios
+echo.
+echo Para iniciar sesion en Expo:
+echo   npx eas-cli login
+echo.
+pause
 goto menu
 
 :end
 echo.
-echo Gracias por usar el sistema de build de RefillCenter!
+echo Gracias por usar el sistema de build de Liga Softbol La Pascua!
 echo.
