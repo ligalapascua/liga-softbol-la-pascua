@@ -32,6 +32,9 @@ Thumbs.db
 .env.local
 .env.*.local
 
+# credenciales sensibles
+docs/Acceso.txt
+
 # ide
 .vscode/
 .idea/
