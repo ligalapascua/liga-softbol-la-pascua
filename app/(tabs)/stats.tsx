@@ -9,17 +9,45 @@ import { EmptyState, Loading, SectionHeader } from "../../components/ui";
 import { TeamLogo } from "../../components/TeamLogo";
 import type { PersonStatSummary, Team } from "../../lib/types";
 
-interface Leader extends PersonStatSummary {
-  numeric: number;
+// Métricas que se muestran como columnas en la tabla de líderes.
+// `key` es el nombre exacto que devuelve la API (leagueStatTypeName).
+// `label` es la abreviatura corta para la cabecera.
+// `format` controla cómo se renderiza el valor.
+interface Metric {
+  key: string;
+  label: string;
+  format: (v: number) => string;
+  // Mínimo de valor para aparecer en la tabla (evita divisiones por 0 en AVG).
+  minToQualify?: number;
+}
+
+const METRICS: Metric[] = [
+  { key: "AVG", label: "AVG", format: (v) => v.toFixed(3).replace(/^0/, "") },
+  { key: "AB", label: "AB", format: (v) => String(Math.round(v)) },
+  { key: "H", label: "H", format: (v) => String(Math.round(v)) },
+  { key: "HR", label: "HR", format: (v) => String(Math.round(v)) },
+  { key: "BB", label: "BB", format: (v) => String(Math.round(v)) },
+  { key: "R", label: "R", format: (v) => String(Math.round(v)) },
+  { key: "RBI", label: "RBI", format: (v) => String(Math.round(v)) },
+  { key: "2B", label: "2B", format: (v) => String(Math.round(v)) },
+  { key: "3B", label: "3B", format: (v) => String(Math.round(v)) },
+  { key: "SB", label: "SB", format: (v) => String(Math.round(v)) },
+];
+
+interface PlayerRow {
+  personID: number;
+  name: string;
   teamName: string;
+  stats: Map<string, number>; // key -> valor numérico
 }
 
 export default function StatsScreen() {
   const { theme } = useTheme();
   const { seasonID, categories, selectedCategory, selectCategory } = useAppStore();
-  const [all, setAll] = useState<Leader[] | null>(null);
+  const [players, setPlayers] = useState<PlayerRow[] | null>(null);
+  const [availableMetrics, setAvailableMetrics] = useState<Metric[]>([]);
+  const [sortBy, setSortBy] = useState<string>("AVG");
   const [error, setError] = useState<string | null>(null);
-  const [metric, setMetric] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
@@ -34,25 +62,49 @@ export default function StatsScreen() {
         teams.map(async (t) => {
           try {
             const s = await getStatisticSummaryForTeam(seasonID, t.teamID);
-            return (s.listCumulativePersonStatSummary ?? []).map((p) => ({
-              ...p,
-              numeric: parseFloat(p.statTypeValue) || 0,
-              teamName: t.teamName,
-            }));
+            return { teamName: t.teamName, stats: s.listCumulativePersonStatSummary ?? [] };
           } catch {
-            return [] as Leader[];
+            return { teamName: t.teamName, stats: [] as PersonStatSummary[] };
           }
         })
       );
-      setAll(perTeam.flat());
+
+      // Consolidar por jugador
+      const map = new Map<number, PlayerRow>();
+      const metricKeysFound = new Set<string>();
+      for (const { teamName, stats } of perTeam) {
+        for (const s of stats) {
+          const numeric = parseFloat(s.statTypeValue) || 0;
+          metricKeysFound.add(s.leagueStatTypeName);
+          const existing = map.get(s.personID);
+          if (existing) {
+            existing.stats.set(s.leagueStatTypeName, numeric);
+          } else {
+            const row: PlayerRow = {
+              personID: s.personID,
+              name: `${s.firstName} ${s.lastName}`.trim(),
+              teamName,
+              stats: new Map([[s.leagueStatTypeName, numeric]]),
+            };
+            map.set(s.personID, row);
+          }
+        }
+      }
+
+      // Filtrar métricas a las que realmente existen en los datos
+      const metrics = METRICS.filter((m) => metricKeysFound.has(m.key));
+      setAvailableMetrics(metrics);
+      if (metrics.length > 0 && !metrics.find((m) => m.key === sortBy)) {
+        setSortBy(metrics[0].key);
+      }
+      setPlayers([...map.values()]);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error");
     }
-  }, [selectedCategory, seasonID]);
+  }, [selectedCategory, seasonID, sortBy]);
 
   useEffect(() => {
-    setAll(null);
-    setMetric(null);
+    setPlayers(null);
     load();
   }, [load]);
 
@@ -62,27 +114,16 @@ export default function StatsScreen() {
     setRefreshing(false);
   }, [load]);
 
-  // Métricas con al menos un valor > 0, ordenadas por relevancia.
-  const metrics = useMemo(() => {
-    if (!all) return [];
-    const counts = new Map<string, number>();
-    for (const s of all) {
-      if (s.numeric > 0) counts.set(s.leagueStatTypeName, (counts.get(s.leagueStatTypeName) ?? 0) + 1);
-    }
-    return [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([k]) => k);
-  }, [all]);
-
-  useEffect(() => {
-    if (metrics.length && (!metric || !metrics.includes(metric))) setMetric(metrics[0]);
-  }, [metrics, metric]);
-
+  // Filtrar jugadores con al menos AB > 0 y ordenar por la métrica seleccionada.
   const leaders = useMemo(() => {
-    if (!all || !metric) return [];
-    return all
-      .filter((s) => s.leagueStatTypeName === metric && s.numeric > 0)
-      .sort((a, b) => b.numeric - a.numeric)
-      .slice(0, 20);
-  }, [all, metric]);
+    if (!players || availableMetrics.length === 0) return [];
+    const sorted = players
+      .filter((p) => (p.stats.get("AB") ?? 0) > 0)
+      .sort((a, b) => (b.stats.get(sortBy) ?? 0) - (a.stats.get(sortBy) ?? 0));
+    return sorted;
+  }, [players, availableMetrics, sortBy]);
+
+  const sortMetric = availableMetrics.find((m) => m.key === sortBy);
 
   return (
     <ScrollView
@@ -98,29 +139,38 @@ export default function StatsScreen() {
       />
 
       <View style={{ paddingHorizontal: spacing.lg, marginTop: spacing.lg }}>
-        {!all && !error ? (
+        {!players && !error ? (
           <Loading label="Recopilando estadísticas de todos los equipos…" />
         ) : error ? (
           <EmptyState title="No se pudieron cargar las estadísticas" message={error} onRetry={load} />
-        ) : metrics.length === 0 ? (
+        ) : availableMetrics.length === 0 || leaders.length === 0 ? (
           <EmptyState
             title="Sin estadísticas"
             message="Esta categoría aún no tiene estadísticas registradas."
           />
         ) : (
           <>
-            <SectionHeader title="Líderes" subtitle="Selecciona una estadística" />
+            <SectionHeader
+              title="Líderes estadísticos"
+              subtitle={
+                sortMetric
+                  ? `Ordenado por ${sortMetric.label}${sortMetric.key === "AVG" ? " (promedio de bateo)" : ""}`
+                  : undefined
+              }
+            />
+
+            {/* Selector de métrica para ordenar */}
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ gap: spacing.sm, paddingBottom: spacing.md }}
             >
-              {metrics.map((m) => {
-                const active = metric === m;
+              {availableMetrics.map((m) => {
+                const active = sortBy === m.key;
                 return (
                   <Pressable
-                    key={m}
-                    onPress={() => setMetric(m)}
+                    key={m.key}
+                    onPress={() => setSortBy(m.key)}
                     style={[
                       {
                         backgroundColor: active ? theme.primary : theme.surface,
@@ -140,39 +190,19 @@ export default function StatsScreen() {
                         fontFamily: active ? font.semibold : font.medium,
                       }}
                     >
-                      {m}
+                      {m.label}
                     </Text>
                   </Pressable>
                 );
               })}
             </ScrollView>
 
-            {leaders.length === 0 ? (
-              <EmptyState title="Sin datos para esta estadística" />
-            ) : (
-              <View
-                style={[
-                  {
-                    backgroundColor: theme.surface,
-                    borderRadius: radius.xl,
-                    borderWidth: 1,
-                    borderColor: theme.borderSubtle,
-                    overflow: "hidden",
-                  },
-                  elevation(2),
-                ]}
-              >
-                {leaders.map((p, i) => (
-                  <LeaderRow
-                    key={`${p.personID}-${p.leagueStatTypeID}`}
-                    rank={i + 1}
-                    leader={p}
-                    theme={theme}
-                    last={i === leaders.length - 1}
-                  />
-                ))}
-              </View>
-            )}
+            <LeadersTable
+              leaders={leaders.slice(0, 25)}
+              metrics={availableMetrics}
+              sortBy={sortBy}
+              theme={theme}
+            />
           </>
         )}
       </View>
@@ -180,80 +210,205 @@ export default function StatsScreen() {
   );
 }
 
-function LeaderRow({
-  rank,
-  leader,
+function LeadersTable({
+  leaders,
+  metrics,
+  sortBy,
   theme,
-  last,
 }: {
-  rank: number;
-  leader: Leader;
+  leaders: PlayerRow[];
+  metrics: Metric[];
+  sortBy: string;
   theme: Theme;
-  last: boolean;
 }) {
-  const medal =
-    rank === 1 ? theme.gold : rank === 2 ? "#94A3B8" : rank === 3 ? "#B45309" : null;
+  const NAME_COL = 140;
+  const STAT_COL = 42;
 
   return (
     <View
-      style={{
-        flexDirection: "row",
-        alignItems: "center",
-        paddingVertical: spacing.md,
-        paddingHorizontal: spacing.md,
-        borderBottomWidth: last ? 0 : 1,
-        borderBottomColor: theme.borderSubtle,
-        backgroundColor: rank <= 3 ? theme.surfaceAlt : theme.surface,
-      }}
+      style={[
+        {
+          backgroundColor: theme.surface,
+          borderRadius: radius.xl,
+          borderWidth: 1,
+          borderColor: theme.borderSubtle,
+          overflow: "hidden",
+        },
+        elevation(2),
+      ]}
     >
-      <View
-        style={{
-          width: 26,
-          height: 26,
-          borderRadius: radius.sm,
-          alignItems: "center",
-          justifyContent: "center",
-          marginRight: spacing.sm,
-          backgroundColor: medal ? `${medal}22` : "transparent",
-        }}
-      >
-        <Text
+      <View style={{ flexDirection: "row" }}>
+        {/* Columna fija: rank + jugador + equipo */}
+        <View
           style={{
-            fontSize: 12,
-            color: medal ?? theme.textFaint,
-            fontFamily: font.bold,
+            width: NAME_COL,
+            borderRightWidth: 1,
+            borderRightColor: theme.border,
+            backgroundColor: theme.surface,
           }}
         >
-          {rank}
-        </Text>
+          <HeaderCell theme={theme} width={NAME_COL} align="left" pad>
+            JUGADOR
+          </HeaderCell>
+          {leaders.map((p, i) => (
+            <View
+              key={`${p.personID}-${p.teamName}`}
+              style={{
+                height: 52,
+                flexDirection: "row",
+                alignItems: "center",
+                paddingHorizontal: spacing.sm,
+                backgroundColor: i % 2 === 0 ? theme.surface : theme.surfaceAlt,
+                borderTopWidth: 1,
+                borderTopColor: theme.borderSubtle,
+              }}
+            >
+              <RankBadge rank={i + 1} theme={theme} />
+              <TeamLogo name={p.teamName} size={24} />
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={{
+                    color: theme.text,
+                    fontSize: 12,
+                    fontFamily: font.medium,
+                  }}
+                  numberOfLines={1}
+                >
+                  {p.name}
+                </Text>
+                <Text
+                  style={{
+                    color: theme.textFaint,
+                    fontSize: 10,
+                    fontFamily: font.regular,
+                  }}
+                  numberOfLines={1}
+                >
+                  {p.teamName}
+                </Text>
+              </View>
+            </View>
+          ))}
+        </View>
+
+        {/* Stats con scroll horizontal */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} bounces={false}>
+          <View>
+            <View style={{ flexDirection: "row" }}>
+              {metrics.map((m) => (
+                <HeaderCell
+                  key={m.key}
+                  theme={theme}
+                  width={STAT_COL}
+                  accent={m.key === sortBy}
+                >
+                  {m.label}
+                </HeaderCell>
+              ))}
+            </View>
+            {leaders.map((p, i) => (
+              <View
+                key={`${p.personID}-${p.teamName}-stats`}
+                style={{
+                  flexDirection: "row",
+                  height: 52,
+                  alignItems: "center",
+                  backgroundColor: i % 2 === 0 ? theme.surface : theme.surfaceAlt,
+                  borderTopWidth: 1,
+                  borderTopColor: theme.borderSubtle,
+                }}
+              >
+                {metrics.map((m) => {
+                  const value = p.stats.get(m.key) ?? 0;
+                  const isSort = m.key === sortBy;
+                  return (
+                    <Text
+                      key={m.key}
+                      style={{
+                        width: STAT_COL,
+                        textAlign: "center",
+                        fontSize: 13,
+                        color: isSort ? theme.primary : theme.textMuted,
+                        fontFamily: isSort ? font.bold : font.regular,
+                      }}
+                    >
+                      {m.format(value)}
+                    </Text>
+                  );
+                })}
+              </View>
+            ))}
+          </View>
+        </ScrollView>
       </View>
+    </View>
+  );
+}
 
-      <TeamLogo name={leader.teamName} size={30} />
-
-      <View style={{ flex: 1 }}>
-        <Text
-          style={{ color: theme.text, fontSize: 14, fontFamily: font.medium }}
-          numberOfLines={1}
-        >
-          {leader.firstName} {leader.lastName}
-        </Text>
-        <Text
-          style={{ color: theme.textFaint, fontSize: 11, fontFamily: font.regular }}
-          numberOfLines={1}
-        >
-          {leader.teamName}
-        </Text>
-      </View>
-
+function HeaderCell({
+  children,
+  theme,
+  width,
+  align = "center",
+  accent,
+  pad,
+}: {
+  children: React.ReactNode;
+  theme: Theme;
+  width: number;
+  align?: "left" | "center";
+  accent?: boolean;
+  pad?: boolean;
+}) {
+  return (
+    <View
+      style={{
+        width,
+        height: 38,
+        justifyContent: "center",
+        alignItems: align === "left" ? "flex-start" : "center",
+        paddingHorizontal: pad ? spacing.md : 0,
+        backgroundColor: theme.primaryDark,
+      }}
+    >
       <Text
         style={{
-          color: theme.primary,
-          fontSize: 18,
+          fontSize: 10,
+          letterSpacing: 0.6,
+          color: accent ? theme.accent : theme.textInverse,
           fontFamily: font.bold,
-          marginLeft: spacing.sm,
+          opacity: accent ? 1 : 0.85,
         }}
       >
-        {leader.statTypeValue}
+        {children}
+      </Text>
+    </View>
+  );
+}
+
+function RankBadge({ rank, theme }: { rank: number; theme: Theme }) {
+  const medal =
+    rank === 1 ? theme.gold : rank === 2 ? "#94A3B8" : rank === 3 ? "#B45309" : null;
+  return (
+    <View
+      style={{
+        width: 20,
+        height: 20,
+        borderRadius: radius.sm - 2,
+        alignItems: "center",
+        justifyContent: "center",
+        marginRight: spacing.xs,
+        backgroundColor: medal ? `${medal}22` : "transparent",
+      }}
+    >
+      <Text
+        style={{
+          fontSize: 11,
+          color: medal ?? theme.textFaint,
+          fontFamily: font.bold,
+        }}
+      >
+        {rank}
       </Text>
     </View>
   );

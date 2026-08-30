@@ -27,6 +27,18 @@ export default function Root({ children }: PropsWithChildren) {
         <meta name="apple-mobile-web-app-title" content="Softbol La Pascua" />
         <link rel="apple-touch-icon" href="/icon-192.png" />
         <link rel="icon" type="image/png" href="/favicon.png" />
+        {/* Ocultar el badge "Powered by Netlify" y el Netlify Drawer. */}
+        <style>{`
+          #netlify-badge,
+          .netlify-badge,
+          [data-netlify-badge],
+          #netlify-identity-menu,
+          #netlify-identity-widget,
+          #ntls-drawer,
+          .ntls-drawer,
+          #netlify-collab,
+          [class*="netlify"] { display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }
+        `}</style>
       </head>
       <body>
         <ScrollViewStyleReset />

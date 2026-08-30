@@ -146,7 +146,7 @@ function TeamRow({
       <Text
         style={{
           flex: 1,
-          color: played && !win ? theme.textMuted : theme.text,
+          color: win ? theme.primary : played ? theme.textMuted : theme.text,
           fontSize: 14,
           fontFamily: win ? font.bold : font.medium,
         }}

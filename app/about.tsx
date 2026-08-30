@@ -1,6 +1,6 @@
 import { Linking, Pressable, ScrollView, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { ChevronRight, Instagram, Music2, Phone } from "lucide-react-native";
+import { ChevronRight, Github, Instagram, Music2, Phone } from "lucide-react-native";
 import { useTheme } from "../lib/useTheme";
 import { elevation, font, radius, spacing } from "../lib/theme";
 import { SectionHeader } from "../components/ui";
@@ -74,6 +74,16 @@ export default function AboutScreen() {
         <View>
           <SectionHeader title="Contacto" />
           <LinkRow label="Contactos de la liga" url={`${BASE}/contacts.html`} Icon={Phone} />
+        </View>
+
+        <View>
+          <SectionHeader title="Créditos" subtitle="Desarrollo de la aplicación" />
+          <LinkRow
+            label="Ing. Jose Alfredo Sanchez"
+            sub="ingalfsan@gmail.com"
+            url="https://github.com/ingalfsan"
+            Icon={Github}
+          />
         </View>
 
         <Text

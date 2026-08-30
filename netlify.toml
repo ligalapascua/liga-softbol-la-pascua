@@ -16,6 +16,17 @@
   to = "/index.html"
   status = 200
 
+# Desactivar el Netlify Drawer / badge "Powered by Netlify".
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "SAMEORIGIN"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Content-Security-Policy = "default-src 'self' https: data: blob: 'unsafe-inline' 'unsafe-eval'; img-src 'self' https: data: blob:; connect-src 'self' https:; frame-ancestors 'self';"
+
 [[headers]]
   for = "/manifest.webmanifest"
   [headers.values]
