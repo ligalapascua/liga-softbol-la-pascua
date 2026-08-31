@@ -11,6 +11,14 @@
   status = 200
   force = true
 
+# Endpoint unificado de noticias: /news-article -> función serverless.
+# En Render, el servidor Express maneja esta ruta directamente.
+[[redirects]]
+  from = "/news-article"
+  to = "/.netlify/functions/news-article"
+  status = 200
+  force = true
+
 # SPA: todas las rutas sirven index.html (expo-router client routing)
 # Excepto las funciones serverless de Netlify.
 [[redirects]]

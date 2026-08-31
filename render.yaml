@@ -1,0 +1,25 @@
+# Configuración de Render para la Liga de Softbol La Pascua.
+# Render usa este archivo para crear automáticamente los servicios.
+# Docs: https://render.com/docs/blueprint-spec
+#
+# Para usarlo:
+# 1. Conecta tu repositorio de GitHub en Render
+# 2. Render detectará este archivo automáticamente
+# 3. O crea un nuevo Web Service manualmente con:
+#    - Build Command: npm run build:web
+#    - Start Command: npm run start:render
+#    - Environment: Node
+
+services:
+  - type: web
+    name: liga-softbol-la-pascua
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build:web
+    startCommand: npm run start:render
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: 18.0.0
+      - key: NODE_ENV
+        value: production

@@ -13,12 +13,14 @@ interface ArticleData {
   url: string;
 }
 
-// En web, las funciones de Netlify se sirven en /.netlify/functions/
-// En desarrollo local, se puede usar NETLIFY_DEV_URL si está definida.
-const FUNCTION_BASE =
+// Endpoint unificado para obtener artículos de noticias.
+// - En Render: el servidor Express sirve /news-article directamente.
+// - En Netlify: un redirect en netlify.toml envía /news-article a la función.
+// - En nativo: usamos la URL pública de Netlify como fallback.
+const NEWS_ENDPOINT =
   Platform.OS === "web"
-    ? `${typeof window !== "undefined" ? window.location.origin : ""}/.netlify/functions`
-    : "https://ligalapascua.netlify.app/.netlify/functions";
+    ? "/news-article"
+    : "https://ligalapascua.netlify.app/news-article";
 
 export default function NewsArticleScreen() {
   const { theme } = useTheme();
@@ -36,7 +38,7 @@ export default function NewsArticleScreen() {
     setLoading(true);
     setError(null);
     try {
-      const resp = await fetch(`${FUNCTION_BASE}/news-article?slug=${encodeURIComponent(slug)}`);
+      const resp = await fetch(`${NEWS_ENDPOINT}?slug=${encodeURIComponent(slug)}`);
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const data = await resp.json();
       if (data.error) throw new Error(data.error);
