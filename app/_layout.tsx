@@ -55,6 +55,7 @@ export default function RootLayout() {
           <Stack.Screen name="match/[id]" options={{ title: "Partido" }} />
           <Stack.Screen name="team/[id]" options={{ title: "Equipo" }} />
           <Stack.Screen name="news" options={{ title: "Noticias" }} />
+          <Stack.Screen name="news/[slug]" options={{ title: "Noticia" }} />
           <Stack.Screen name="about" options={{ title: "Sobre la Liga" }} />
           <Stack.Screen name="+not-found" options={{ title: "No encontrado" }} />
         </Stack>

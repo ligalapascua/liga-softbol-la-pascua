@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, createElement } from "react";
 import { Linking, Platform, Pressable, ScrollView, Text, View, Image, useWindowDimensions } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter, useNavigation } from "expo-router";
 import { ArrowLeft, ExternalLink } from "lucide-react-native";
 import { useTheme } from "../../lib/useTheme";
 import { elevation, font, radius, spacing } from "../../lib/theme";
@@ -23,6 +23,7 @@ const FUNCTION_BASE =
 export default function NewsArticleScreen() {
   const { theme } = useTheme();
   const router = useRouter();
+  const navigation = useNavigation();
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const { width: screenWidth } = useWindowDimensions();
   const [article, setArticle] = useState<ArticleData | null>(null);
@@ -50,6 +51,14 @@ export default function NewsArticleScreen() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Actualizar el título del header/navegador con el título real del artículo.
+  useEffect(() => {
+    navigation.setOptions({
+      title: article?.title || "Noticia",
+      headerTitle: article?.title || "Noticia",
+    });
+  }, [navigation, article]);
 
   return (
     <ScrollView
