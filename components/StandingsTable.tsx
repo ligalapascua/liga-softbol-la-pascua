@@ -1,5 +1,5 @@
 // Tabla de posiciones: columna de equipo fija + stats con scroll horizontal.
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
 import { Link } from "expo-router";
 import { useTheme } from "../lib/useTheme";
 import { elevation, font, radius, spacing, type Theme } from "../lib/theme";
@@ -7,7 +7,8 @@ import type { StandingLine } from "../lib/types";
 import { TeamLogo } from "./TeamLogo";
 import { RecentForm } from "./RecentForm";
 
-const TEAM_COL_WIDTH = 190;
+// Ancho mínimo de la columna de equipo; se ajusta al ancho de pantalla.
+const TEAM_COL_MIN = 190;
 
 interface Col {
   key: string;
@@ -41,7 +42,14 @@ function signed(n: number): string {
 
 export function StandingsTable({ lines }: { lines: StandingLine[] }) {
   const { theme } = useTheme();
+  const { width: screenWidth } = useWindowDimensions();
   const sorted = [...lines].sort((a, b) => Number(a.position) - Number(b.position));
+
+  // Ancho de la columna de equipo: ocupa el espacio disponible dejando
+  // un mínimo para stats. Si hay muchas columnas, el área de stats hace
+  // scroll horizontal y el nombre del equipo aprovecha todo el ancho.
+  const statsMinArea = 120;
+  const teamColWidth = Math.max(TEAM_COL_MIN, screenWidth - statsMinArea);
 
   return (
     <View
@@ -60,13 +68,13 @@ export function StandingsTable({ lines }: { lines: StandingLine[] }) {
         {/* Columna fija: posición + equipo */}
         <View
           style={{
-            width: TEAM_COL_WIDTH,
+            width: teamColWidth,
             borderRightWidth: 1,
             borderRightColor: theme.border,
             backgroundColor: theme.surface,
           }}
         >
-          <HeaderCell theme={theme} width={TEAM_COL_WIDTH} align="left" pad>
+          <HeaderCell theme={theme} width={teamColWidth} align="left" pad>
             Equipo
           </HeaderCell>
           {sorted.map((l, i) => (

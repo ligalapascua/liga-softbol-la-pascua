@@ -53,6 +53,7 @@ app/                # Rutas (expo-router, file-based)
   match/[id].tsx     # Ficha de partido
   team/[id].tsx      # Ficha de equipo + plantilla
   news.tsx           # Noticias (links al sitio)
+  news/[slug].tsx    # Artículo de noticia dentro de la app
   about.tsx          # Sobre la liga
   +not-found.tsx
 components/          # Componentes reutilizables
@@ -74,6 +75,11 @@ public/              # Manifest e iconos PWA
 scripts/
   inject-manifest.js # Inyecta meta tags PWA en dist/index.html
   clean.js           # Limpia node_modules / .expo / dist
+netlify/
+  functions/         # Funciones serverless (news-article)
+server.cjs           # Servidor Express para Render
+render.yaml          # Configuración de Render Blueprint
+netlify.toml         # Configuración de Netlify
 docs/                # Referencia de la API
 ```
 
@@ -125,6 +131,7 @@ En nativo (Android/iOS) no hay CORS y se usa la URL directa. La lógica está en
 |--------------------------|------------------------------------------------|
 | `npm run dev`            | Inicia Expo (dev web/móvil)                    |
 | `npm run build:web`      | Exporta la PWA a `dist/` + inyecta manifest    |
+| `npm run start:render`   | Arranca servidor Express para Render           |
 | `npm run lint`           | Lint del proyecto                              |
 | `npm run build:android`  | Build EAS Android (producción, AAB)            |
 | `npm run clean`          | Limpia `node_modules` / `.expo` / `dist`       |
@@ -154,17 +161,41 @@ Menú interactivo para generar binarios vía EAS Build:
 **Primera vez**: ejecuta la opción 12 para configurar credenciales
 (`eas-cli credentials --platform android` genera el keystore automáticamente).
 
-## Despliegue web (Netlify)
+## Despliegue web
 
-El repo está conectado a Netlify y despliega automáticamente en cada push a
-`main`. Configuración en `netlify.toml`:
+La PWA está desplegada en dos plataformas para máxima disponibilidad:
+
+| Plataforma | URL | Tipo |
+|------------|-----|------|
+| **Netlify** | <https://ligalapascua.netlify.app> | Static Site + Functions |
+| **Render** | <https://liga-softbol-la-pascua.onrender.com> | Web Service (Express) |
+
+Ambas se actualizan automáticamente en cada push a `main`.
+
+### Netlify (Static Site + Functions)
+
+Configuración en `netlify.toml`:
 
 - **Build**: `npm run build:web`
 - **Publish**: `dist/`
 - **Proxy API**: `/api/*` → `api.leaguerepublic.com/json/*` (evita CORS)
+- **Funciones**: `netlify/functions/` (endpoint de noticias)
 - **SPA redirects**: todas las rutas sirven `index.html` (expo-router)
 
-### Visitor access (privacidad del sitio)
+### Render (Web Service con Express)
+
+Configuración en `render.yaml` y `server.cjs`:
+
+- **Build**: `npm install && npm run build:web`
+- **Start**: `npm run start:render` (arranca `server.cjs`)
+- **Proxy API**: el servidor Express enruta `/api/*` a la API de LeagueRepublic
+- **Noticias**: el servidor Express maneja `/news-article` directamente
+- **SPA**: todas las demás rutas sirven `index.html`
+
+> **Nota sobre el plan Free de Render**: el servicio se duerme tras 15 minutos
+> sin actividad. La primera visita después tarda ~30 segundos en despertar.
+
+### Visitor access en Netlify (privacidad del sitio)
 
 Por defecto Netlify marca los sitios como **privados** (Team Protection): los
 visitantes externos ven un mensaje "This site is private" y deben iniciar
@@ -177,8 +208,6 @@ sesión con una cuenta invitada del equipo. Para que el sitio sea público:
 
 Si el sitio vuelve a mostrar "This site is private", revisa este setting —
 es independiente de la configuración de `netlify.toml`.
-
-URL: <https://ligalapascua.netlify.app>
 
 ## Documentación de referencia
 
