@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, Text, View, useWindowDimensions } from "react-native";
 import { getStatisticSummaryForTeam, getTeamsForFixtureGroup } from "../../lib/api";
 import { useAppStore } from "../../store/app.store";
 import { useTheme } from "../../lib/useTheme";
@@ -10,44 +10,44 @@ import { TeamLogo } from "../../components/TeamLogo";
 import type { PersonStatSummary, Team } from "../../lib/types";
 
 // Métricas de la tabla de líderes.
-// `key` = nombre que devuelve la API (leagueStatTypeName), salvo AVG que
-// se calcula en el cliente (H/AB) porque la API no lo expone.
-// `primary` = visible por defecto; el resto se muestra al expandir.
+// `key` = nombre que devuelve la API (leagueStatTypeName), salvo AVG/OBP/SLG
+// que se calculan en el cliente porque la API no los expone.
 interface Metric {
   key: string;
   label: string;
   hint: string;
   format: (v: number) => string;
-  primary?: boolean;
   computed?: boolean;
 }
 
 const AVG_KEY = "AVG";
-
-const METRICS: Metric[] = [
-  {
-    key: AVG_KEY,
-    label: "AVG",
-    hint: "Promedio de bateo (H/AB)",
-    format: (v) => (v > 0 ? v.toFixed(3).replace(/^0/, "") : "—"),
-    primary: true,
-    computed: true,
-  },
-  { key: "AB", label: "AB", hint: "Turnos al bate", format: int, primary: true },
-  { key: "H", label: "H", hint: "Hits", format: int, primary: true },
-  { key: "HR", label: "HR", hint: "Jonrones", format: int },
-  { key: "RBI", label: "RBI", hint: "Carreras impulsadas", format: int },
-  { key: "R", label: "R", hint: "Carreras anotadas", format: int },
-  { key: "BB", label: "BB", hint: "Bases por bolas", format: int },
-  { key: "1B", label: "1B", hint: "Sencillos", format: int },
-  { key: "2B", label: "2B", hint: "Dobles", format: int },
-  { key: "3B", label: "3B", hint: "Triples", format: int },
-  { key: "K", label: "K", hint: "Ponches", format: int },
-];
+const OBP_KEY = "OBP";
+const SLG_KEY = "SLG";
 
 function int(v: number): string {
   return String(Math.round(v));
 }
+
+function avg3(v: number): string {
+  return v > 0 ? v.toFixed(3).replace(/^0/, "") : "—";
+}
+
+// Orden de columnas solicitado por el usuario.
+const METRICS: Metric[] = [
+  { key: AVG_KEY, label: "AVG", hint: "Promedio de bateo (H/AB)", format: avg3, computed: true },
+  { key: "AB", label: "AB", hint: "Turnos al bate", format: int },
+  { key: "H", label: "H", hint: "Hits", format: int },
+  { key: "R", label: "R", hint: "Carreras anotadas", format: int },
+  { key: "RBI", label: "RBI", hint: "Carreras impulsadas", format: int },
+  { key: "BB", label: "BB", hint: "Bases por bolas", format: int },
+  { key: "K", label: "K", hint: "Ponches", format: int },
+  { key: "1B", label: "1B", hint: "Sencillos", format: int },
+  { key: "2B", label: "2B", hint: "Dobles", format: int },
+  { key: "3B", label: "3B", hint: "Triples", format: int },
+  { key: "HR", label: "HR", hint: "Jonrones", format: int },
+  { key: OBP_KEY, label: "OBP", hint: "% de embasado (H+BB)/(AB+BB)", format: avg3, computed: true },
+  { key: SLG_KEY, label: "SLG", hint: "Slugging (1B+2·2B+3·3B+4·HR)/AB", format: avg3, computed: true },
+];
 
 interface PlayerRow {
   personID: number;
@@ -61,8 +61,7 @@ export default function StatsScreen() {
   const { seasonID, categories, selectedCategory, selectCategory } = useAppStore();
   const [players, setPlayers] = useState<PlayerRow[] | null>(null);
   const [availableMetrics, setAvailableMetrics] = useState<Metric[]>([]);
-  const [sortBy, setSortBy] = useState<string>(AVG_KEY);
-  const [expanded, setExpanded] = useState(false);
+  const [sortBy, setSortBy] = useState<string>("AB");
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -85,7 +84,6 @@ export default function StatsScreen() {
         })
       );
 
-      // Consolidar todas las métricas de cada jugador en una sola fila.
       const map = new Map<number, PlayerRow>();
       const found = new Set<string>();
       for (const { teamName, stats } of perTeam) {
@@ -106,23 +104,40 @@ export default function StatsScreen() {
         }
       }
 
-      // AVG no viene de la API: se calcula como H/AB.
+      // Métricas calculadas que la API no devuelve.
       const rows = [...map.values()];
-      const canComputeAvg = found.has("H") && found.has("AB");
-      if (canComputeAvg) {
-        for (const r of rows) {
-          const ab = r.stats.get("AB") ?? 0;
-          const h = r.stats.get("H") ?? 0;
-          r.stats.set(AVG_KEY, ab > 0 ? h / ab : 0);
+      const hasH = found.has("H");
+      const hasAB = found.has("AB");
+      const hasBB = found.has("BB");
+      const has1B = found.has("1B");
+      const has2B = found.has("2B");
+      const has3B = found.has("3B");
+      const hasHR = found.has("HR");
+
+      for (const r of rows) {
+        const ab = r.stats.get("AB") ?? 0;
+        const h = r.stats.get("H") ?? 0;
+        const bb = r.stats.get("BB") ?? 0;
+        if (hasH && hasAB) r.stats.set(AVG_KEY, ab > 0 ? h / ab : 0);
+        if (hasH && hasAB && hasBB) {
+          const denom = ab + bb;
+          r.stats.set(OBP_KEY, denom > 0 ? (h + bb) / denom : 0);
         }
-        found.add(AVG_KEY);
+        if (hasAB && (has1B || has2B || has3B || hasHR)) {
+          const s1 = r.stats.get("1B") ?? 0;
+          const s2 = r.stats.get("2B") ?? 0;
+          const s3 = r.stats.get("3B") ?? 0;
+          const hr = r.stats.get("HR") ?? 0;
+          r.stats.set(SLG_KEY, ab > 0 ? (s1 + 2 * s2 + 3 * s3 + 4 * hr) / ab : 0);
+        }
       }
+      if (hasH && hasAB) found.add(AVG_KEY);
+      if (hasH && hasAB && hasBB) found.add(OBP_KEY);
+      if (hasAB && (has1B || has2B || has3B || hasHR)) found.add(SLG_KEY);
 
       const metrics = METRICS.filter((m) => found.has(m.key));
       setAvailableMetrics(metrics);
-      setSortBy((prev) =>
-        metrics.some((m) => m.key === prev) ? prev : metrics[0]?.key ?? AVG_KEY
-      );
+      setSortBy((prev) => (metrics.some((m) => m.key === prev) ? prev : "AB"));
       setPlayers(rows);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error");
@@ -131,7 +146,6 @@ export default function StatsScreen() {
 
   useEffect(() => {
     setPlayers(null);
-    setExpanded(false);
     load();
   }, [load]);
 
@@ -140,13 +154,6 @@ export default function StatsScreen() {
     await load();
     setRefreshing(false);
   }, [load]);
-
-  const visibleMetrics = useMemo(
-    () => availableMetrics.filter((m) => expanded || m.primary),
-    [availableMetrics, expanded]
-  );
-
-  const hasExtraColumns = availableMetrics.some((m) => !m.primary);
 
   const leaders = useMemo(() => {
     if (!players) return [];
@@ -170,39 +177,38 @@ export default function StatsScreen() {
         onSelect={selectCategory}
       />
 
-      <View style={{ paddingHorizontal: spacing.lg, marginTop: spacing.lg }}>
+      <View style={{ marginTop: spacing.lg }}>
         {!players && !error ? (
-          <Loading label="Recopilando estadísticas de todos los equipos…" />
+          <View style={{ paddingHorizontal: spacing.lg }}>
+            <Loading label="Recopilando estadísticas de todos los equipos…" />
+          </View>
         ) : error ? (
-          <EmptyState title="No se pudieron cargar las estadísticas" message={error} onRetry={load} />
+          <View style={{ paddingHorizontal: spacing.lg }}>
+            <EmptyState title="No se pudieron cargar las estadísticas" message={error} onRetry={load} />
+          </View>
         ) : availableMetrics.length === 0 || leaders.length === 0 ? (
-          <EmptyState
-            title="Sin estadísticas"
-            message="Esta categoría aún no tiene estadísticas registradas."
-          />
+          <View style={{ paddingHorizontal: spacing.lg }}>
+            <EmptyState
+              title="Sin estadísticas"
+              message="Esta categoría aún no tiene estadísticas registradas."
+            />
+          </View>
         ) : (
           <>
-            {/* La acción del encabezado expande/colapsa columnas: siempre visible. */}
-            <SectionHeader
-              title="Líderes"
-              subtitle={sortMetric ? `Ordenado por ${sortMetric.hint}` : undefined}
-              action={
-                hasExtraColumns
-                  ? {
-                      label: expanded ? "− Menos" : "+ Más columnas",
-                      onPress: () => setExpanded((v) => !v),
-                    }
-                  : undefined
-              }
-            />
+            <View style={{ paddingHorizontal: spacing.lg }}>
+              <SectionHeader
+                title="Líderes estadísticos"
+                subtitle={sortMetric ? `Ordenado por ${sortMetric.hint}` : undefined}
+              />
+            </View>
 
-            {/* Chips para elegir la métrica de ordenamiento. */}
+            {/* Selector de métrica para ordenar */}
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ gap: spacing.sm, paddingBottom: spacing.md }}
+              contentContainerStyle={{ gap: spacing.sm, paddingHorizontal: spacing.lg, paddingVertical: spacing.md }}
             >
-              {visibleMetrics.map((m) => {
+              {availableMetrics.map((m) => {
                 const active = sortBy === m.key;
                 return (
                   <Pressable
@@ -236,7 +242,7 @@ export default function StatsScreen() {
 
             <LeadersTable
               leaders={leaders.slice(0, 30)}
-              metrics={visibleMetrics}
+              metrics={availableMetrics}
               sortBy={sortBy}
               theme={theme}
             />
@@ -247,12 +253,11 @@ export default function StatsScreen() {
                 fontSize: 10,
                 fontFamily: font.regular,
                 marginTop: spacing.sm,
+                marginHorizontal: spacing.lg,
                 textAlign: "center",
               }}
             >
-              {expanded
-                ? "Desliza la tabla para ver todas las columnas"
-                : "Toca “+ Más columnas” para ver HR, RBI, R, BB y más"}
+              Desliza la tabla horizontalmente para ver todas las columnas
             </Text>
           </>
         )}
@@ -272,16 +277,22 @@ function LeadersTable({
   sortBy: string;
   theme: Theme;
 }) {
-  const NAME_COL = 150;
-  const STAT_COL = 46;
+  const { width: screenWidth } = useWindowDimensions();
+  // La columna del jugador usa el espacio que sobre tras reservar un
+  // mínimo para stats; si hay muchas columnas, el área de stats hace
+  // scroll horizontal y el nombre se queda fijo aprovechando todo el
+  // ancho disponible.
+  const STAT_COL = 48;
+  const minStatsArea = 120;
+  const nameColWidth = Math.max(140, screenWidth - Math.min(minStatsArea, metrics.length * STAT_COL));
 
   return (
     <View
       style={[
         {
           backgroundColor: theme.surface,
-          borderRadius: radius.xl,
-          borderWidth: 1,
+          borderTopWidth: 1,
+          borderBottomWidth: 1,
           borderColor: theme.borderSubtle,
           overflow: "hidden",
         },
@@ -289,22 +300,16 @@ function LeadersTable({
       ]}
     >
       <View style={{ flexDirection: "row" }}>
-        {/* Columna fija: puesto + jugador + equipo */}
-        <View
-          style={{
-            width: NAME_COL,
-            borderRightWidth: 1,
-            borderRightColor: theme.border,
-          }}
-        >
-          <HeaderCell theme={theme} width={NAME_COL} align="left" pad>
+        {/* Columna fija: puesto + jugador + equipo — aprovecha el ancho */}
+        <View style={{ width: nameColWidth, borderRightWidth: 1, borderRightColor: theme.border }}>
+          <HeaderCell theme={theme} align="left" pad>
             JUGADOR
           </HeaderCell>
           {leaders.map((p, i) => (
             <View
               key={p.personID}
               style={{
-                height: 52,
+                height: 50,
                 flexDirection: "row",
                 alignItems: "center",
                 paddingHorizontal: spacing.sm,
@@ -315,9 +320,9 @@ function LeadersTable({
             >
               <RankBadge rank={i + 1} theme={theme} />
               <TeamLogo name={p.teamName} size={24} />
-              <View style={{ flex: 1 }}>
+              <View style={{ flex: 1, marginLeft: spacing.xs }}>
                 <Text
-                  style={{ color: theme.text, fontSize: 12, fontFamily: font.medium }}
+                  style={{ color: theme.text, fontSize: 13, fontFamily: font.medium }}
                   numberOfLines={1}
                 >
                   {p.name}
@@ -333,7 +338,7 @@ function LeadersTable({
           ))}
         </View>
 
-        {/* Stats: con scroll horizontal solo si hay muchas columnas */}
+        {/* Stats: scroll horizontal, todas las columnas siempre presentes */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} bounces={false}>
           <View>
             <View style={{ flexDirection: "row" }}>
@@ -348,7 +353,7 @@ function LeadersTable({
                 key={p.personID}
                 style={{
                   flexDirection: "row",
-                  height: 52,
+                  height: 50,
                   alignItems: "center",
                   backgroundColor: i % 2 === 0 ? theme.surface : theme.surfaceAlt,
                   borderTopWidth: 1,
@@ -391,7 +396,7 @@ function HeaderCell({
 }: {
   children: React.ReactNode;
   theme: Theme;
-  width: number;
+  width?: number;
   align?: "left" | "center";
   accent?: boolean;
   pad?: boolean;
@@ -400,6 +405,7 @@ function HeaderCell({
     <View
       style={{
         width,
+        flex: width ? undefined : 1,
         height: 38,
         justifyContent: "center",
         alignItems: align === "left" ? "flex-start" : "center",
