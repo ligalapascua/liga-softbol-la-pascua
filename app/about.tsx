@@ -1,6 +1,6 @@
 import { Linking, Pressable, ScrollView, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { ChevronRight, Github, Instagram, Music2, Phone } from "lucide-react-native";
+import { ChevronRight, Github, Instagram, Music2, Phone, Globe, Triangle, Cloud, Server } from "lucide-react-native";
 import { useTheme } from "../lib/useTheme";
 import { elevation, font, radius, spacing } from "../lib/theme";
 import { SectionHeader } from "../components/ui";
@@ -16,6 +16,13 @@ const SPONSORS = [
   { label: "Motorepuestos EAV", url: "https://www.instagram.com/motorepuestoseav/" },
   { label: "Los Portus 2014", url: "https://www.instagram.com/losportus_2014.ca/" },
   { label: "Donde Merce", url: "https://www.instagram.com/dond_merce/" },
+];
+
+const PORTFOLIOS = [
+  { label: "Netlify", url: "https://alfsan.netlify.app", Icon: Globe },
+  { label: "Vercel", url: "https://alfsan.vercel.app", Icon: Triangle },
+  { label: "Cloudflare", url: "https://ingalfsan.pages.dev/", Icon: Cloud },
+  { label: "Render", url: "https://alfsan.onrender.com/", Icon: Server },
 ];
 
 export default function AboutScreen() {
@@ -80,10 +87,24 @@ export default function AboutScreen() {
           <SectionHeader title="Créditos" subtitle="Desarrollo de la aplicación" />
           <LinkRow
             label="Ing. Jose Alfredo Sanchez"
-            sub="ingalfsan@gmail.com"
+            sub="Desarrollador"
             url="https://github.com/ingalfsan"
             Icon={Github}
           />
+          {/* Portafolios del autor */}
+          <View
+            style={{
+              flexDirection: "row",
+              flexWrap: "wrap",
+              gap: spacing.sm,
+              marginTop: spacing.md,
+              paddingHorizontal: spacing.xs,
+            }}
+          >
+            {PORTFOLIOS.map((p) => (
+              <PortfolioIcon key={p.url} url={p.url} label={p.label} Icon={p.Icon} />
+            ))}
+          </View>
         </View>
 
         <Text
@@ -153,6 +174,40 @@ function LinkRow({
         ) : null}
       </View>
       <ChevronRight color={theme.textFaint} size={17} />
+    </Pressable>
+  );
+}
+
+function PortfolioIcon({
+  url,
+  label,
+  Icon,
+}: {
+  url: string;
+  label: string;
+  Icon: typeof Instagram;
+}) {
+  const { theme } = useTheme();
+  return (
+    <Pressable
+      onPress={() => Linking.openURL(url)}
+      accessibilityLabel={`Portafolio en ${label}`}
+      hitSlop={8}
+      style={({ pressed }) => [
+        {
+          width: 44,
+          height: 44,
+          borderRadius: radius.md,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: theme.surface,
+          borderWidth: 1,
+          borderColor: pressed ? theme.primary : theme.borderSubtle,
+        },
+        elevation(1),
+      ]}
+    >
+      <Icon color={theme.primary} size={20} />
     </Pressable>
   );
 }
