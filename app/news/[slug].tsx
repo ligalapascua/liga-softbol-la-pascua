@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, createElement } from "react";
-import { Linking, Platform, Pressable, ScrollView, Text, View, Image } from "react-native";
+import { Linking, Platform, Pressable, ScrollView, Text, View, Image, useWindowDimensions } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft, ExternalLink } from "lucide-react-native";
 import { useTheme } from "../../lib/useTheme";
@@ -24,9 +24,11 @@ export default function NewsArticleScreen() {
   const { theme } = useTheme();
   const router = useRouter();
   const { slug } = useLocalSearchParams<{ slug: string }>();
+  const { width: screenWidth } = useWindowDimensions();
   const [article, setArticle] = useState<ArticleData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [imageAspect, setImageAspect] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     if (!slug) return;
@@ -97,12 +99,19 @@ export default function NewsArticleScreen() {
               source={{ uri: article.image }}
               style={{
                 width: "100%",
-                height: 220,
+                // Altura proporcional a la anchura, sin recortar.
+                // Si aún no sabemos el aspect ratio, usamos 16:9 como fallback.
+                aspectRatio: imageAspect ?? 16 / 9,
                 borderRadius: radius.lg,
                 marginBottom: spacing.md,
+                backgroundColor: theme.surfaceAlt,
               }}
-              resizeMode="cover"
+              resizeMode="contain"
               accessibilityLabel={article.title}
+              onLoad={(e) => {
+                const { width: w, height: h } = e.nativeEvent.source;
+                if (w > 0 && h > 0) setImageAspect(w / h);
+              }}
             />
           ) : null}
 
