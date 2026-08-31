@@ -1,4 +1,5 @@
 import { Linking, Pressable, ScrollView, Text, View, Image } from "react-native";
+import { useRouter } from "expo-router";
 import { ExternalLink } from "lucide-react-native";
 import { useTheme } from "../lib/useTheme";
 import { elevation, font, radius, spacing } from "../lib/theme";
@@ -37,6 +38,7 @@ const BASE = "https://sofbollapascua.leaguerepublic.com";
 
 export default function NewsScreen() {
   const { theme } = useTheme();
+  const router = useRouter();
   return (
     <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxl }}>
       <SectionHeader
@@ -48,7 +50,7 @@ export default function NewsScreen() {
         {NEWS.map((n) => (
           <Pressable
             key={n.slug}
-            onPress={() => Linking.openURL(`${BASE}/newsArticle/${n.slug}.html`)}
+            onPress={() => router.push(`/news/${n.slug}` as any)}
             style={({ pressed }) => [
               {
                 backgroundColor: theme.surface,

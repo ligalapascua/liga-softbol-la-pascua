@@ -1,6 +1,7 @@
 [build]
   command = "npm run build:web"
   publish = "dist"
+  functions = "netlify/functions"
 
 # Proxy para la API de LeagueRepublic (evita CORS en web).
 # /api/getSeasonsForLeague/815179436.json -> https://api.leaguerepublic.com/json/getSeasonsForLeague/815179436.json
@@ -11,6 +12,7 @@
   force = true
 
 # SPA: todas las rutas sirven index.html (expo-router client routing)
+# Excepto las funciones serverless de Netlify.
 [[redirects]]
   from = "/*"
   to = "/index.html"
