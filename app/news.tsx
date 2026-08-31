@@ -1,25 +1,35 @@
-import { Linking, Pressable, ScrollView, Text, View } from "react-native";
+import { Linking, Pressable, ScrollView, Text, View, Image } from "react-native";
 import { ExternalLink } from "lucide-react-native";
 import { useTheme } from "../lib/useTheme";
 import { elevation, font, radius, spacing } from "../lib/theme";
 import { SectionHeader } from "../components/ui";
 
-const NEWS = [
+interface NewsItem {
+  slug: string;
+  title: string;
+  image: string;
+}
+
+const NEWS: NewsItem[] = [
   {
     slug: "la_liga_de_softbol_la_pascua_se_prepara_para_su_gran_allstar_2026",
     title: "La Liga de Softbol La Pascua se prepara para su gran All-Star 2026",
+    image: "https://images.leaguerepublic.com/data/images/650249628/110.jpg",
   },
   {
     slug: "dixon_cuarez_se_lleva_el_mvp_de_la_jornada_en_la_categora_c_masculino",
     title: "Dixon Cuarez se lleva el MVP de la jornada en la categoría C Masculino",
+    image: "https://images.leaguerepublic.com/data/images/384533287/110.jpg",
   },
   {
     slug: "rosmerth_manrique_mvp_de_la_jornada_en_la_categora_c_especial",
     title: "Rosmerth Manrique, MVP de la jornada en la categoría C Especial",
+    image: "https://images.leaguerepublic.com/data/images/572005311/110.jpg",
   },
   {
     slug: "se_prende_la_categora_c_masculino_solo_cuatro_sobreviven_y_todos_van_por_las_semifinales",
     title: "Se prende la categoría C Masculino: solo cuatro sobreviven y todos van por las semifinales",
+    image: "https://images.leaguerepublic.com/data/images/622544922/110.jpg",
   },
 ];
 
@@ -34,7 +44,7 @@ export default function NewsScreen() {
         subtitle="Publicadas en el sitio oficial de la liga"
       />
 
-      <View style={{ gap: spacing.sm }}>
+      <View style={{ gap: spacing.md }}>
         {NEWS.map((n) => (
           <Pressable
             key={n.slug}
@@ -43,35 +53,44 @@ export default function NewsScreen() {
               {
                 backgroundColor: theme.surface,
                 borderRadius: radius.lg,
-                padding: spacing.lg,
                 borderWidth: 1,
                 borderColor: pressed ? theme.primary : theme.borderSubtle,
+                overflow: "hidden",
               },
               elevation(1),
             ]}
           >
-            <Text
-              style={{
-                color: theme.text,
-                fontSize: 14,
-                lineHeight: 20,
-                fontFamily: font.semibold,
-              }}
-            >
-              {n.title}
-            </Text>
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                gap: spacing.xs,
-                marginTop: spacing.sm,
-              }}
-            >
-              <ExternalLink color={theme.primary} size={12} />
-              <Text style={{ color: theme.primary, fontSize: 11, fontFamily: font.semibold }}>
-                Leer artículo
+            {/* Imagen destacada del artículo (og:image del sitio) */}
+            <Image
+              source={{ uri: n.image }}
+              style={{ width: "100%", height: 180 }}
+              resizeMode="cover"
+              accessibilityLabel={n.title}
+            />
+            <View style={{ padding: spacing.lg }}>
+              <Text
+                style={{
+                  color: theme.text,
+                  fontSize: 15,
+                  lineHeight: 21,
+                  fontFamily: font.semibold,
+                }}
+              >
+                {n.title}
               </Text>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: spacing.xs,
+                  marginTop: spacing.sm,
+                }}
+              >
+                <ExternalLink color={theme.primary} size={12} />
+                <Text style={{ color: theme.primary, fontSize: 11, fontFamily: font.semibold }}>
+                  Leer artículo
+                </Text>
+              </View>
             </View>
           </Pressable>
         ))}
