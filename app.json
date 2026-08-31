@@ -20,6 +20,11 @@
       "bundleIdentifier": "com.ligalapascua.app"
     },
     "android": {
+      "splash": {
+        "image": "./assets/splash-android.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#0B4281"
+      },
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#0B4281"
