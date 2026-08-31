@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { RefreshControl, ScrollView, Text, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import { useLocalSearchParams, useRouter, useNavigation } from "expo-router";
+import { ArrowLeft } from "lucide-react-native";
 import { getFixturesForSeason, isFuture, isPast, parseFixtureDate } from "../../lib/api";
 import { useAppStore } from "../../store/app.store";
 import { useTheme } from "../../lib/useTheme";
@@ -13,11 +15,27 @@ type Filter = "results" | "upcoming";
 
 export default function FixturesScreen() {
   const { theme } = useTheme();
+  const router = useRouter();
+  const navigation = useNavigation();
+  const { back } = useLocalSearchParams<{ back?: string }>();
   const { categories, selectedCategory, selectCategory } = useAppStore();
   const [fixtures, setFixtures] = useState<Fixture[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>("results");
   const [refreshing, setRefreshing] = useState(false);
+
+  // Botón de atrás en el header cuando se navega desde Inicio.
+  useEffect(() => {
+    navigation.setOptions({
+      headerLeft: back === "home"
+        ? () => (
+            <Pressable onPress={() => router.navigate("/")} hitSlop={12} style={{ marginLeft: 4 }}>
+              <ArrowLeft color="#FFFFFF" size={22} />
+            </Pressable>
+          )
+        : undefined,
+    });
+  }, [navigation, back, router]);
 
   const load = useCallback(async () => {
     setError(null);

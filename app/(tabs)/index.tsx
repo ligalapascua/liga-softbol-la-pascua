@@ -165,8 +165,8 @@ export default function HomeScreen() {
           marginTop: spacing.lg,
         }}
       >
-        <QuickAction icon={Trophy} label="Posiciones" onPress={() => router.push("/standings")} theme={theme} />
-        <QuickAction icon={BarChart3} label="Líderes" onPress={() => router.push("/stats")} theme={theme} />
+        <QuickAction icon={Trophy} label="Posiciones" onPress={() => router.push("/standings?back=home" as any)} theme={theme} />
+        <QuickAction icon={BarChart3} label="Líderes" onPress={() => router.push("/stats?back=home" as any)} theme={theme} />
         <QuickAction icon={Newspaper} label="Noticias" onPress={() => router.push("/news")} theme={theme} />
         <QuickAction icon={Info} label="La Liga" onPress={() => router.push("/about")} theme={theme} />
       </View>
@@ -175,7 +175,7 @@ export default function HomeScreen() {
       <View style={{ paddingHorizontal: spacing.lg, marginTop: spacing.xl }}>
         <SectionHeader
           title="Próximos partidos"
-          action={{ label: "Ver todos", onPress: () => router.push("/fixtures") }}
+          action={{ label: "Ver todos", onPress: () => router.push("/fixtures?back=home" as any) }}
         />
         {!fixtures && !error ? (
           <Loading />
@@ -192,7 +192,7 @@ export default function HomeScreen() {
       <View style={{ paddingHorizontal: spacing.lg, marginTop: spacing.xl }}>
         <SectionHeader
           title="Últimos resultados"
-          action={{ label: "Ver todos", onPress: () => router.push("/fixtures") }}
+          action={{ label: "Ver todos", onPress: () => router.push("/fixtures?back=home" as any) }}
         />
         {!fixtures && !error ? (
           <Loading />

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, Text, View, useWindowDimensions } from "react-native";
+import { useLocalSearchParams, useRouter, useNavigation } from "expo-router";
+import { ArrowLeft } from "lucide-react-native";
 import { getStatisticSummaryForTeam, getTeamsForFixtureGroup } from "../../lib/api";
 import { useAppStore } from "../../store/app.store";
 import { useTheme } from "../../lib/useTheme";
@@ -58,12 +60,28 @@ interface PlayerRow {
 
 export default function StatsScreen() {
   const { theme } = useTheme();
+  const router = useRouter();
+  const navigation = useNavigation();
+  const { back } = useLocalSearchParams<{ back?: string }>();
   const { seasonID, categories, selectedCategory, selectCategory } = useAppStore();
   const [players, setPlayers] = useState<PlayerRow[] | null>(null);
   const [availableMetrics, setAvailableMetrics] = useState<Metric[]>([]);
   const [sortBy, setSortBy] = useState<string>("AB");
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Botón de atrás en el header cuando se navega desde Inicio.
+  useEffect(() => {
+    navigation.setOptions({
+      headerLeft: back === "home"
+        ? () => (
+            <Pressable onPress={() => router.navigate("/")} hitSlop={12} style={{ marginLeft: 4 }}>
+              <ArrowLeft color="#FFFFFF" size={22} />
+            </Pressable>
+          )
+        : undefined,
+    });
+  }, [navigation, back, router]);
 
   const load = useCallback(async () => {
     if (!selectedCategory) return;

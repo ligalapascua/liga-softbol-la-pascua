@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { RefreshControl, ScrollView, Text, View } from "react-native";
+import { RefreshControl, ScrollView, Text, View, Pressable } from "react-native";
+import { useLocalSearchParams, useRouter, useNavigation } from "expo-router";
+import { ArrowLeft } from "lucide-react-native";
 import { getStandingsForFixtureGroup } from "../../lib/api";
 import { useAppStore } from "../../store/app.store";
 import { useTheme } from "../../lib/useTheme";
@@ -11,10 +13,26 @@ import type { StandingGroup } from "../../lib/types";
 
 export default function StandingsScreen() {
   const { theme } = useTheme();
+  const router = useRouter();
+  const navigation = useNavigation();
+  const { back } = useLocalSearchParams<{ back?: string }>();
   const { categories, selectedCategory, selectCategory } = useAppStore();
   const [groups, setGroups] = useState<StandingGroup[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Botón de atrás en el header cuando se navega desde Inicio.
+  useEffect(() => {
+    navigation.setOptions({
+      headerLeft: back === "home"
+        ? () => (
+            <Pressable onPress={() => router.navigate("/")} hitSlop={12} style={{ marginLeft: 4 }}>
+              <ArrowLeft color="#FFFFFF" size={22} />
+            </Pressable>
+          )
+        : undefined,
+    });
+  }, [navigation, back, router]);
 
   const load = useCallback(async () => {
     if (!selectedCategory) return;
