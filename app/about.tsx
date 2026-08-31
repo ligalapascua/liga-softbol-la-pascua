@@ -1,6 +1,6 @@
 import { Linking, Pressable, ScrollView, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { ChevronRight, Github, Instagram, Music2, Phone, Globe, Triangle, Cloud, Server } from "lucide-react-native";
+import { ChevronRight, Github, Instagram, Music2, Phone, Globe, Triangle, Cloud, Server, Building2 } from "lucide-react-native";
 import { useTheme } from "../lib/useTheme";
 import { elevation, font, radius, spacing } from "../lib/theme";
 import { SectionHeader } from "../components/ui";
@@ -11,11 +11,15 @@ const SOCIALS = [
   { label: "Liga de Softbol La Pascua", sub: "TikTok oficial", url: "https://www.tiktok.com/@liga.de.sftbol.la", icon: Music2 },
 ];
 
-const SPONSORS = [
+const SPONSORS: { label: string; url?: string }[] = [
   { label: "Finca Corazón de Jesús", url: "https://www.instagram.com/fincacorazondejesus/" },
   { label: "Motorepuestos EAV", url: "https://www.instagram.com/motorepuestoseav/" },
   { label: "Los Portus 2014", url: "https://www.instagram.com/losportus_2014.ca/" },
   { label: "Donde Merce", url: "https://www.instagram.com/dond_merce/" },
+  { label: "Agropecuaria San Pedro" },
+  { label: "Finca Agropecuaria San Cristóbal" },
+  { label: "HR Compra y Venta de Vehículos" },
+  { label: "Carlos Valera" },
 ];
 
 const PORTFOLIOS = [
@@ -72,8 +76,13 @@ export default function AboutScreen() {
         <View>
           <SectionHeader title="Patrocinadores" />
           <View style={{ gap: spacing.sm }}>
-            {SPONSORS.map((s) => (
-              <LinkRow key={s.url} label={s.label} url={s.url} Icon={Instagram} />
+            {SPONSORS.map((s, i) => (
+              <LinkRow
+                key={s.url ?? `nolink-${i}`}
+                label={s.label}
+                url={s.url}
+                Icon={s.url ? Instagram : Building2}
+              />
             ))}
           </View>
         </View>
@@ -132,13 +141,15 @@ function LinkRow({
 }: {
   label: string;
   sub?: string;
-  url: string;
+  url?: string;
   Icon: typeof Instagram;
 }) {
   const { theme } = useTheme();
+  const hasLink = !!url;
   return (
     <Pressable
-      onPress={() => Linking.openURL(url)}
+      onPress={hasLink ? () => Linking.openURL(url!) : undefined}
+      disabled={!hasLink}
       style={({ pressed }) => [
         {
           flexDirection: "row",
@@ -147,7 +158,7 @@ function LinkRow({
           padding: spacing.md,
           borderRadius: radius.lg,
           backgroundColor: theme.surface,
-          borderColor: pressed ? theme.primary : theme.borderSubtle,
+          borderColor: pressed && hasLink ? theme.primary : theme.borderSubtle,
           borderWidth: 1,
         },
         elevation(1),
@@ -173,7 +184,7 @@ function LinkRow({
           </Text>
         ) : null}
       </View>
-      <ChevronRight color={theme.textFaint} size={17} />
+      {hasLink ? <ChevronRight color={theme.textFaint} size={17} /> : null}
     </Pressable>
   );
 }
