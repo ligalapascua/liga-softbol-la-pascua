@@ -74,27 +74,26 @@ export function StandingsTable({ lines }: { lines: StandingLine[] }) {
               <Pressable
                 style={({ pressed }) => ({
                   height: 54,
-                  flexDirection: "row",
-                  alignItems: "center",
-                  paddingHorizontal: spacing.sm,
                   backgroundColor: rowBg(theme, i, pressed),
                   borderTopWidth: 1,
                   borderTopColor: theme.borderSubtle,
                 })}
               >
-                <PositionBadge position={Number(l.position)} theme={theme} />
-                <TeamLogo name={l.teamName} size={26} />
-                <Text
-                  style={{
-                    flex: 1,
-                    color: theme.text,
-                    fontSize: 13,
-                    fontFamily: font.medium,
-                  }}
-                  numberOfLines={1}
-                >
-                  {l.teamName}
-                </Text>
+                <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: spacing.sm, height: "100%" }}>
+                  <PositionBadge position={Number(l.position)} theme={theme} />
+                  <TeamLogo name={l.teamName} size={26} />
+                  <Text
+                    style={{
+                      flex: 1,
+                      color: theme.text,
+                      fontSize: 13,
+                      fontFamily: font.medium,
+                    }}
+                    numberOfLines={1}
+                  >
+                    {l.teamName}
+                  </Text>
+                </View>
               </Pressable>
             </Link>
           ))}
