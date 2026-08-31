@@ -6,11 +6,6 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "userInterfaceStyle": "automatic",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#0B4281"
-    },
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -20,11 +15,6 @@
       "bundleIdentifier": "com.ligalapascua.app"
     },
     "android": {
-      "splash": {
-        "image": "./assets/splash-android.png",
-        "resizeMode": "contain",
-        "backgroundColor": "#0B4281"
-      },
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#0B4281"
@@ -43,7 +33,21 @@
       "themeColor": "#0B4281"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0B4281",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 220,
+          "resizeMode": "contain",
+          "android": {
+            "backgroundColor": "#0B4281",
+            "image": "./assets/images/splash-icon.png",
+            "imageWidth": 220
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
