@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import { ChevronDown, ChevronUp } from "lucide-react-native";
 import { getStatisticSummaryForTeam, getTeamsForFixtureGroup } from "../../lib/api";
 import { useAppStore } from "../../store/app.store";
 import { useTheme } from "../../lib/useTheme";
@@ -13,18 +14,18 @@ import type { PersonStatSummary, Team } from "../../lib/types";
 // `key` es el nombre exacto que devuelve la API (leagueStatTypeName).
 // `label` es la abreviatura corta para la cabecera.
 // `format` controla cómo se renderiza el valor.
+// `primary` = siempre visible; las demás van colapsadas.
 interface Metric {
   key: string;
   label: string;
   format: (v: number) => string;
-  // Mínimo de valor para aparecer en la tabla (evita divisiones por 0 en AVG).
-  minToQualify?: number;
+  primary?: boolean;
 }
 
 const METRICS: Metric[] = [
-  { key: "AVG", label: "AVG", format: (v) => v.toFixed(3).replace(/^0/, "") },
-  { key: "AB", label: "AB", format: (v) => String(Math.round(v)) },
-  { key: "H", label: "H", format: (v) => String(Math.round(v)) },
+  { key: "AVG", label: "AVG", format: (v) => v.toFixed(3).replace(/^0/, ""), primary: true },
+  { key: "AB", label: "AB", format: (v) => String(Math.round(v)), primary: true },
+  { key: "H", label: "H", format: (v) => String(Math.round(v)), primary: true },
   { key: "HR", label: "HR", format: (v) => String(Math.round(v)) },
   { key: "BB", label: "BB", format: (v) => String(Math.round(v)) },
   { key: "R", label: "R", format: (v) => String(Math.round(v)) },
@@ -47,6 +48,7 @@ export default function StatsScreen() {
   const [players, setPlayers] = useState<PlayerRow[] | null>(null);
   const [availableMetrics, setAvailableMetrics] = useState<Metric[]>([]);
   const [sortBy, setSortBy] = useState<string>("AVG");
+  const [expanded, setExpanded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -159,13 +161,15 @@ export default function StatsScreen() {
               }
             />
 
-            {/* Selector de métrica para ordenar */}
+            {/* Selector de métrica para ordenar (solo visibles según expanded) */}
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ gap: spacing.sm, paddingBottom: spacing.md }}
             >
-              {availableMetrics.map((m) => {
+              {availableMetrics
+                .filter((m) => expanded || m.primary)
+                .map((m) => {
                 const active = sortBy === m.key;
                 return (
                   <Pressable
@@ -199,10 +203,40 @@ export default function StatsScreen() {
 
             <LeadersTable
               leaders={leaders.slice(0, 25)}
-              metrics={availableMetrics}
+              metrics={availableMetrics.filter((m) => expanded || m.primary)}
               sortBy={sortBy}
               theme={theme}
             />
+
+            {/* Toggle para expandir/colapsar columnas adicionales */}
+            {availableMetrics.some((m) => !m.primary) ? (
+              <Pressable
+                onPress={() => setExpanded((v) => !v)}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: spacing.xs,
+                  marginTop: spacing.md,
+                  paddingVertical: spacing.sm,
+                }}
+              >
+                {expanded ? (
+                  <ChevronUp color={theme.primary} size={16} />
+                ) : (
+                  <ChevronDown color={theme.primary} size={16} />
+                )}
+                <Text
+                  style={{
+                    color: theme.primary,
+                    fontSize: 13,
+                    fontFamily: font.semibold,
+                  }}
+                >
+                  {expanded ? "Ver menos columnas" : "Ver más columnas (HR, BB, R, RBI…)"}
+                </Text>
+              </Pressable>
+            ) : null}
           </>
         )}
       </View>
