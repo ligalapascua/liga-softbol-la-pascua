@@ -87,28 +87,56 @@ export default function HomeScreen() {
           borderBottomRightRadius: radius.xxl,
         }}
       >
-        <Text
+        <View
           style={{
-            color: "#FFFFFF",
-            fontSize: 11,
-            letterSpacing: 1.4,
-            fontFamily: font.bold,
-            opacity: 0.75,
+            flexDirection: "row",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
           }}
         >
-          TEMPORADA {seasonName}
-        </Text>
-        <Text
-          style={{
-            color: "#FFFFFF",
-            fontSize: 26,
-            fontFamily: font.display,
-            marginTop: spacing.xs,
-            letterSpacing: -0.5,
-          }}
-        >
-          Liga de Softbol{"\n"}La Pascua
-        </Text>
+          <View style={{ flex: 1 }}>
+            <Text
+              style={{
+                color: "#FFFFFF",
+                fontSize: 11,
+                letterSpacing: 1.4,
+                fontFamily: font.bold,
+                opacity: 0.75,
+              }}
+            >
+              TEMPORADA {seasonName}
+            </Text>
+            <Text
+              style={{
+                color: "#FFFFFF",
+                fontSize: 26,
+                fontFamily: font.display,
+                marginTop: spacing.xs,
+                letterSpacing: -0.5,
+              }}
+            >
+              Liga de Softbol{"\n"}La Pascua
+            </Text>
+          </View>
+
+          {/* Acceso discreto a "Acerca de" */}
+          <Pressable
+            onPress={() => router.push("/about")}
+            hitSlop={10}
+            accessibilityLabel="Acerca de la aplicación"
+            style={({ pressed }) => ({
+              width: 34,
+              height: 34,
+              borderRadius: radius.pill,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: "rgba(255,255,255,0.16)",
+              opacity: pressed ? 0.6 : 1,
+            })}
+          >
+            <Info color="#FFFFFF" size={17} />
+          </Pressable>
+        </View>
 
         <View style={{ flexDirection: "row", gap: spacing.xl, marginTop: spacing.lg }}>
           <HeroStat label="Categorías" value={String(categories.length || "—")} />
