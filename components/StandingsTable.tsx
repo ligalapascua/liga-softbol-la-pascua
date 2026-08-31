@@ -1,6 +1,6 @@
 // Tabla de posiciones: columna de equipo fija + stats con scroll horizontal.
 import { Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
-import { Link } from "expo-router";
+import { useRouter } from "expo-router";
 import { useTheme } from "../lib/useTheme";
 import { elevation, font, radius, spacing, type Theme } from "../lib/theme";
 import type { StandingLine } from "../lib/types";
@@ -42,6 +42,7 @@ function signed(n: number): string {
 
 export function StandingsTable({ lines }: { lines: StandingLine[] }) {
   const { theme } = useTheme();
+  const router = useRouter();
   const { width: screenWidth } = useWindowDimensions();
   const sorted = [...lines].sort((a, b) => Number(a.position) - Number(b.position));
 
@@ -78,32 +79,33 @@ export function StandingsTable({ lines }: { lines: StandingLine[] }) {
             Equipo
           </HeaderCell>
           {sorted.map((l, i) => (
-            <Link key={l.teamID} href={`/team/${l.teamID}`} asChild>
-              <Pressable
-                style={({ pressed }) => ({
-                  height: 54,
-                  backgroundColor: rowBg(theme, i, pressed),
-                  borderTopWidth: 1,
-                  borderTopColor: theme.borderSubtle,
-                })}
+            <Pressable
+              key={l.teamID}
+              onPress={() => router.push(`/team/${l.teamID}` as any)}
+              style={({ pressed }) => ({
+                height: 54,
+                flexDirection: "row",
+                alignItems: "center",
+                paddingHorizontal: spacing.sm,
+                backgroundColor: rowBg(theme, i, pressed),
+                borderTopWidth: 1,
+                borderTopColor: theme.borderSubtle,
+              })}
+            >
+              <PositionBadge position={Number(l.position)} theme={theme} />
+              <TeamLogo name={l.teamName} size={26} />
+              <Text
+                style={{
+                  flex: 1,
+                  color: theme.text,
+                  fontSize: 13,
+                  fontFamily: font.medium,
+                }}
+                numberOfLines={1}
               >
-                <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: spacing.sm, height: "100%" }}>
-                  <PositionBadge position={Number(l.position)} theme={theme} />
-                  <TeamLogo name={l.teamName} size={26} />
-                  <Text
-                    style={{
-                      flex: 1,
-                      color: theme.text,
-                      fontSize: 13,
-                      fontFamily: font.medium,
-                    }}
-                    numberOfLines={1}
-                  >
-                    {l.teamName}
-                  </Text>
-                </View>
-              </Pressable>
-            </Link>
+                {l.teamName}
+              </Text>
+            </Pressable>
           ))}
         </View>
 

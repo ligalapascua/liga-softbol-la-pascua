@@ -144,18 +144,6 @@ export default function HomeScreen() {
         </View>
       </LinearGradient>
 
-      {/* Categorías */}
-      <View style={{ marginTop: spacing.lg }}>
-        <View style={{ paddingHorizontal: spacing.lg }}>
-          <SectionHeader title="Categorías" />
-        </View>
-        <CategoryTabs
-          categories={categories}
-          selected={selectedCategory}
-          onSelect={selectCategory}
-        />
-      </View>
-
       {/* Accesos rápidos */}
       <View
         style={{
@@ -169,6 +157,21 @@ export default function HomeScreen() {
         <QuickAction icon={BarChart3} label="Líderes" onPress={() => router.push("/stats?back=home" as any)} theme={theme} />
         <QuickAction icon={Newspaper} label="Noticias" onPress={() => router.push("/news")} theme={theme} />
         <QuickAction icon={Info} label="La Liga" onPress={() => router.push("/about")} theme={theme} />
+      </View>
+
+      {/* Categorías (afecta a Próximos y Últimos resultados) */}
+      <View style={{ marginTop: spacing.lg }}>
+        <View style={{ paddingHorizontal: spacing.lg }}>
+          <SectionHeader
+            title="Categoría"
+            subtitle="Filtra los partidos de abajo"
+          />
+        </View>
+        <CategoryTabs
+          categories={categories}
+          selected={selectedCategory}
+          onSelect={selectCategory}
+        />
       </View>
 
       {/* Próximos */}
