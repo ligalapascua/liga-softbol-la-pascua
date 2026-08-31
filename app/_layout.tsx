@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { Platform } from "react-native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as SplashScreen from "expo-splash-screen";
@@ -20,6 +21,37 @@ import { font } from "../lib/theme";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
+/**
+ * Workaround para bug de expo-router SDK 52 en web:
+ * añade "?__EXPO_ROUTER_key=undefined-..." a la URL al navegar.
+ * Corregido en SDK 53, pero no podemos hacer upgrade aún.
+ * Ver: https://github.com/expo/expo/issues/33449
+ */
+function useCleanExpoRouterKey() {
+  useEffect(() => {
+    if (Platform.OS !== "web" || typeof window === "undefined") return;
+    const clean = () => {
+      const url = new URL(window.location.href);
+      if (url.searchParams.has("__EXPO_ROUTER_key")) {
+        url.searchParams.delete("__EXPO_ROUTER_key");
+        window.history.replaceState({}, document.title, url.toString());
+      }
+    };
+    clean();
+    // Limpiar también después de cada cambio de ruta (popstate + pushstate).
+    window.addEventListener("popstate", clean);
+    const originalPushState = window.history.pushState;
+    window.history.pushState = function (...args) {
+      originalPushState.apply(this, args);
+      setTimeout(clean, 0);
+    };
+    return () => {
+      window.removeEventListener("popstate", clean);
+      window.history.pushState = originalPushState;
+    };
+  }, []);
+}
+
 export default function RootLayout() {
   const { theme, isDark } = useTheme();
   const [loaded, error] = useFonts({
@@ -30,6 +62,8 @@ export default function RootLayout() {
     Poppins_500Medium,
     Poppins_600SemiBold,
   });
+
+  useCleanExpoRouterKey();
 
   useEffect(() => {
     if (loaded || error) SplashScreen.hideAsync().catch(() => {});
