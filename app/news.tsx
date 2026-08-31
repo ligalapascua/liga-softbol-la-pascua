@@ -60,36 +60,38 @@ export default function NewsScreen() {
               elevation(1),
             ]}
           >
-            {/* Imagen destacada del artículo (og:image del sitio) */}
-            <Image
-              source={{ uri: n.image }}
-              style={{ width: "100%", height: 180 }}
-              resizeMode="cover"
-              accessibilityLabel={n.title}
-            />
-            <View style={{ padding: spacing.lg }}>
-              <Text
-                style={{
-                  color: theme.text,
-                  fontSize: 15,
-                  lineHeight: 21,
-                  fontFamily: font.semibold,
-                }}
-              >
-                {n.title}
-              </Text>
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: spacing.xs,
-                  marginTop: spacing.sm,
-                }}
-              >
-                <ExternalLink color={theme.primary} size={12} />
-                <Text style={{ color: theme.primary, fontSize: 11, fontFamily: font.semibold }}>
-                  Leer artículo
+            {/* Miniatura lateral sin perder aspect ratio (cover en cuadrado) */}
+            <View style={{ flexDirection: "row", gap: spacing.md }}>
+              <Image
+                source={{ uri: n.image }}
+                style={{ width: 96, height: 96, borderRadius: radius.md }}
+                resizeMode="cover"
+                accessibilityLabel={n.title}
+              />
+              <View style={{ flex: 1, justifyContent: "center" }}>
+                <Text
+                  style={{
+                    color: theme.text,
+                    fontSize: 15,
+                    lineHeight: 21,
+                    fontFamily: font.semibold,
+                  }}
+                >
+                  {n.title}
                 </Text>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: spacing.xs,
+                    marginTop: spacing.sm,
+                  }}
+                >
+                  <ExternalLink color={theme.primary} size={12} />
+                  <Text style={{ color: theme.primary, fontSize: 11, fontFamily: font.semibold }}>
+                    Leer artículo
+                  </Text>
+                </View>
               </View>
             </View>
           </Pressable>
