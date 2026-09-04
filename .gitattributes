@@ -1,0 +1,2 @@
+# Archivos batch de Windows requieren terminaciones CRLF
+*.bat text eol=crlf
